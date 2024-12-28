@@ -3,7 +3,18 @@ import pandas as pd
 from datetime import datetime
 from pp import calc_modified_rating, calc_pp_from_accuracy
 
-def fetch_scores(beatleaderId: str) -> pd.DataFrame:
+# map type conversions
+MAP_TYPES = { 
+  1: "Accuracy", 
+  2: "Tech", 
+  4: "Midspeed", 
+  8: "Speed"
+}
+
+# split map ratings
+RATINGS = ["passRating", "accRating", "techRating"]
+
+def fetch_scores(player_id: str) -> pd.DataFrame:
   """ Gets every ranked score set by a player on BeatLeader.
 
   Args:
@@ -14,28 +25,19 @@ def fetch_scores(beatleaderId: str) -> pd.DataFrame:
   """
 
   # datapoints of interest
-  song_keys = ['name', 'subName', 'author', 'mapper']
+  song_keys = ['name', 'subName', 'author', 'mapper', 'bpm', 'duration']
   difficulty_keys = ["stars", "passRating", "accRating", "techRating", "difficultyName", 
-                    "type", "njs", "nps", "notes", "bombs", "walls", "maxScore", "duration"]
+                    "type", "njs", "nps", "notes", "bombs", "walls", "maxScore"]
   score_keys = ["accLeft", "accRight", "baseScore", "modifiedScore", "accuracy", 
                 "pp", "passPP", "accPP", "techPP", "rank", 
                 "fcAccuracy", "fcPp", "weight", "modifiers", "badCuts", 
                 "missedNotes", "bombCuts", "wallsHit", "pauses", "fullCombo", "maxCombo"]
-  rating_keys = ["passRating", "accRating", "techRating"]
-  
-  # map type conversions
-  map_types = { 
-    1: "Accuracy", 
-    2: "Tech", 
-    4: "Midspeed", 
-    8: "Speed"
-  }
 
   score_rows = []
 
   page = 1
   while True:
-    url = f"https://api.beatleader.xyz/player/{beatleaderId}/scores?sortBy=pp&order=desc&page={page}&count=10&type=ranked"
+    url = f"https://api.beatleader.xyz/player/{player_id}/scores?sortBy=pp&order=desc&page={page}&count=10&type=ranked"
     resp = requests.get(url)
     if (resp.status_code != 200): break
 
@@ -61,14 +63,14 @@ def fetch_scores(beatleaderId: str) -> pd.DataFrame:
 
       # apply modifiers
       modifiers = score.get("modifiers", "").split(",")
-      for rating in rating_keys:
+      for rating in RATINGS:
         base_rating = diff_data[rating]
         modified_rating = calc_modified_rating(base_rating, rating, difficulty["modifiersRating"], modifiers)
         diff_data[rating] = modified_rating
-      diff_data["stars"] = calc_pp_from_accuracy(0.96, *[diff_data[rating] for rating in rating_keys])["total_pp"] / 52
+      diff_data["stars"] = calc_pp_from_accuracy(0.96, *[diff_data[rating] for rating in RATINGS])["total_pp"] / 52
 
       # convert map type and time set
-      diff_data["type"] = map_types.get(diff_data["type"], "Unknown")
+      diff_data["type"] = MAP_TYPES.get(diff_data["type"], "Unknown")
       score_data["dateset"] = datetime.fromtimestamp(score["timepost"])
 
       # append score row
@@ -79,9 +81,49 @@ def fetch_scores(beatleaderId: str) -> pd.DataFrame:
   # create full dataframe
   scores_df = pd.DataFrame(score_rows)
 
-  # ensure numerical columns are floats
-  float_cols = ["stars", "passRating", "accRating", "techRating", "accuracy", 
-                "pp", "passPP", "accPP", "techPP", "weight", "fcAccuracy", "fcPp", "nps"]
-  scores_df[float_cols] = scores_df[float_cols].astype(float)
-
   return scores_df
+
+def fetch_maps() -> pd.DataFrame:
+  """ Gets every ranked map that exists on BeatLeader. """
+
+  # datapoints of interest
+  song_keys = ['name', 'subName', 'author', 'mapper', 'bpm', 'duration']
+  difficulty_keys = ["difficultyName", "stars", "passRating", "accRating", "techRating", "type", "njs", "nps", "notes", "bombs", "walls", "maxScore"]
+  
+  map_rows = []
+
+  page = 1
+  while True:
+    # fetch data from beatleader api
+    url = f"https://api.beatleader.xyz/maps?page={page}&count=10&type=ranked"
+    resp = requests.get(url)
+    if (resp.status_code != 200): break 
+
+    maps = resp.json()["data"]
+    if not maps: break
+
+    for ranked_map in maps:
+      metadata = {
+        "leaderboardId": "",
+        "downloadId": ranked_map["id"],
+        "cover":      ranked_map["coverImage"],
+        "fullCover":  ranked_map["fullCoverImage"]
+      }
+      song_data = { key: ranked_map[key] for key in song_keys }
+
+      for difficulty in ranked_map["difficulties"]:
+        metadata["leaderboardId"] = difficulty["leaderboardId"]
+        diff_data = { key: difficulty[key] for key in difficulty_keys }
+
+        # convert map type
+        diff_data["type"] = MAP_TYPES.get(diff_data["type"], "Unknown")
+
+        # append map row
+        map_rows.append({**metadata, **song_data, **diff_data})
+
+    page += 1
+
+  # create full dataframe (drop non-ranked maps)
+  maps_df = pd.DataFrame(map_rows).dropna(subset=["stars"])
+
+  return maps_df

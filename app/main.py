@@ -12,7 +12,7 @@ class Recommendation(BaseModel):
   predicted_pp: float
 
 @app.get("/recommendations", response_model=List[Recommendation])
-async def get_recommendations(beatleader_id: str):
+async def get_recommendations(playerId: str):
   # logic here
 
   # example data

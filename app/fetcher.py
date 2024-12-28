@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 from datetime import datetime
-from app.pp import calc_modified_rating, calc_pp_from_accuracy
+from pp import calc_modified_rating, calc_pp_from_accuracy
 
 def fetch_scores(beatleaderId: str) -> pd.DataFrame:
   """ Gets every ranked score set by a player on BeatLeader.

@@ -44,18 +44,24 @@ def train_model(scores_df: pd.DataFrame) -> np.array:
   return model
 
 def apply_weight_curve(pred_df: pd.DataFrame) -> pd.DataFrame:
+  """ TODO """
+
   weighted_df = pred_df.copy()
   
-  sort_pred_df = pred_df.sort_values(by="pred_pp", ascending=False)
+  weighted_df = weighted_df.sort_values(by="max_pp", ascending=False)
+  current_pp = weighted_df["current_pp"].sort_values(ascending=False).to_numpy()
+
   weights = np.zeros(len(pred_df))
   weight_idx = 0
+  curve_idx = 0
 
-  for row_idx, row in sort_pred_df.iterrows():
-    if weight_idx < len(WEIGHT_CURVE):
-      weights[row_idx] = WEIGHT_CURVE[weight_idx]
-      if row["status"] == "played": weight_idx += 1
+  for _, row in weighted_df.iterrows():
+    if curve_idx < len(WEIGHT_CURVE) - 1 and row["max_pp"] < current_pp[curve_idx]:
+      curve_idx += 1
+    weights[weight_idx] = WEIGHT_CURVE[curve_idx]
+    weight_idx += 1
   
-  weighted_df["weighted_pp_gain"] = sort_pred_df["unweighted_pp_gain"] * weights
+  weighted_df["weighted_pp_gain"] = weighted_df["unweighted_pp_gain"] * weights
   weighted_df["weights"] = weights
 
   return weighted_df
@@ -78,6 +84,7 @@ def predict_scores(model: np.array, scores_df: pd.DataFrame, maps_df: pd.DataFra
   pred_df["pred_pp"] = pred_df.apply(lambda row: calc_pp_from_accuracy(
     row["pred_acc"], row["mod_passRating"], row["mod_accRating"], row["mod_techRating"])["total_pp"], 
     axis=1)
+  pred_df["max_pp"] = np.maximum(pred_df["current_pp"], pred_df["pred_pp"])
   pred_df["unweighted_pp_gain"] = np.maximum(0, pred_df["pred_pp"] - pred_df["current_pp"])
   pred_df = apply_weight_curve(pred_df)
 

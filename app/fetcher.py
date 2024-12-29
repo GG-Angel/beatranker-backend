@@ -26,12 +26,8 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
 
   # datapoints of interest
   song_keys = ['name', 'subName', 'author', 'mapper', 'bpm', 'duration']
-  difficulty_keys = ["stars", "passRating", "accRating", "techRating", "difficultyName", 
-                    "type", "njs", "nps", "notes", "bombs", "walls", "maxScore"]
-  score_keys = ["accLeft", "accRight", "baseScore", "modifiedScore", "accuracy", 
-                "pp", "passPP", "accPP", "techPP", "rank", 
-                "fcAccuracy", "fcPp", "weight", "modifiers", "badCuts", 
-                "missedNotes", "bombCuts", "wallsHit", "pauses", "fullCombo", "maxCombo"]
+  difficulty_keys = ["stars", "passRating", "accRating", "techRating", "difficultyName", "type"]
+  score_keys = ["accuracy", "pp", "rank", "modifiers", "fullCombo", "maxCombo"]
 
   score_rows = []
 
@@ -53,7 +49,7 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
       # prepare row data
       metadata = {
         "leaderboardId": leaderboard["id"],
-        "downloadId":    song["id"],
+        "songId":        song["id"],
         "cover":         song["coverImage"],
         "fullCover":     song["fullCoverImage"]
       }
@@ -88,7 +84,7 @@ def fetch_maps() -> pd.DataFrame:
 
   # datapoints of interest
   song_keys = ['name', 'subName', 'author', 'mapper', 'bpm', 'duration']
-  difficulty_keys = ["difficultyName", "stars", "passRating", "accRating", "techRating", "type", "njs", "nps", "notes", "bombs", "walls", "maxScore"]
+  difficulty_keys = ["stars", "passRating", "accRating", "techRating", "difficultyName", "type"]
   
   map_rows = []
 
@@ -105,9 +101,9 @@ def fetch_maps() -> pd.DataFrame:
     for ranked_map in maps:
       metadata = {
         "leaderboardId": "",
-        "downloadId": ranked_map["id"],
-        "cover":      ranked_map["coverImage"],
-        "fullCover":  ranked_map["fullCoverImage"]
+        "songId":    ranked_map["id"],
+        "cover":     ranked_map["coverImage"],
+        "fullCover": ranked_map["fullCoverImage"]
       }
       song_data = { key: ranked_map[key] for key in song_keys }
 

@@ -5,7 +5,7 @@ import math
 
 WEIGHT_COEFFICIENT = 0.965
 
-point_list = [
+POINT_LIST = [
     [1.0, 7.424], [0.999, 6.241], [0.9975, 5.158], [0.995, 4.01],
     [0.9925, 3.241], [0.99, 2.7], [0.9875, 2.303], [0.985, 2.007],
     [0.9825, 1.786], [0.98, 1.618], [0.9775, 1.49], [0.975, 1.392],
@@ -16,7 +16,7 @@ point_list = [
     [0.7, 0.345], [0.65, 0.296], [0.6, 0.256], [0.0, 0.0],
 ]
 
-weight_curve = [1.0, 0.965, 0.931, 0.899, 0.867, 0.837, 0.808, 0.779, 0.752, 0.726, 0.7, 0.676, 0.652, 0.629, 0.607, 
+WEIGHT_CURVE = [1.0, 0.965, 0.931, 0.899, 0.867, 0.837, 0.808, 0.779, 0.752, 0.726, 0.7, 0.676, 0.652, 0.629, 0.607, 
                 0.586, 0.566, 0.546, 0.527, 0.508, 0.49, 0.473, 0.457, 0.441, 0.425, 0.41, 0.396, 0.382, 0.369, 0.356, 
                 0.343, 0.331, 0.32, 0.309, 0.298, 0.287, 0.277, 0.268, 0.258, 0.249, 0.24, 0.232, 0.224, 0.216, 0.209, 
                 0.201, 0.194, 0.187, 0.181, 0.175, 0.168, 0.163, 0.157, 0.151, 0.146, 0.141, 0.136, 0.131, 0.127, 0.122, 
@@ -31,7 +31,7 @@ weight_curve = [1.0, 0.965, 0.931, 0.899, 0.867, 0.837, 0.808, 0.779, 0.752, 0.7
                 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 
                 0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
 
-modifier_multipliers = {
+MOD_MULTIPLIERS = {
     "SF": 1.72, # +72%
     "FS": 1.4,  # +40%
     "GN": 1.08, # + 8%
@@ -114,7 +114,7 @@ def calc_modified_rating(rating, ratingName, modifier_ratings, mods):
         return rating
 
     # the rest of the modifers are calculated by summing up their differences against the new rating
-    modifiers_sum = sum((rating * modifier_multipliers[mod]) - rating for mod in remaining_mods)
+    modifiers_sum = sum((rating * MOD_MULTIPLIERS[mod]) - rating for mod in remaining_mods)
 
     return rating + modifiers_sum
 
@@ -138,7 +138,7 @@ def get_pp_from_acc(accuracy, pass_rating, acc_rating, tech_rating):
     if not math.isfinite(pass_pp) or pass_pp < 0:
         pass_pp = 0
 
-    acc_pp = curve(accuracy, point_list) * acc_rating * 34
+    acc_pp = curve(accuracy, POINT_LIST) * acc_rating * 34
     
     tech_pp = math.exp(1.9 * accuracy) * 1.08 * tech_rating
     total_pp = inflate(pass_pp + acc_pp + tech_pp)

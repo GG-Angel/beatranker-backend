@@ -27,7 +27,7 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
   # datapoints of interest
   song_keys = ['name', 'subName', 'author', 'mapper', 'bpm', 'duration']
   difficulty_keys = ["stars", "passRating", "accRating", "techRating", "difficultyName", "type"]
-  score_keys = ["accuracy", "pp", "rank", "modifiers", "fullCombo", "maxCombo"]
+  score_keys = ["accuracy", "pp", "rank", "modifiers", "fullCombo"]
 
   score_rows = []
 

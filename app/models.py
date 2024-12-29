@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from sklearn.base import r2_score
+from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 
 def add_bias_column(X):
@@ -78,21 +78,21 @@ def linreg_predict(Xnew, ynew, m):
     "r2": r2
   }
 
-def train_improvement_model(scores_df: pd.DataFrame) -> np.array:
+def train_improvement_model(scores_df: pd.DataFrame) -> dict:
   """ Trains the model for improving existing scores using polynomial regression.
 
   Params:
     scores_df (df): The DataFrame of player scores
 
   Returns:
-    model (arr): 1d array where the coefficients correspond to the rating and pp features
+    model (dict): 1d array where the coefficients correspond to the rating and pp features, along with X, y and model type
   """
 
   # set accuracy as dependent variable
   y = scores_df["accuracy"].to_numpy().reshape(-1, 1)
 
   # standardize X-features
-  X_feats = scores_df[["passRating", "accRating", "techRating", "passPP", "accPP", "techPP"]]
+  X_feats = scores_df[["mod_passRating", "mod_accRating", "mod_techRating", "passPP", "accPP", "techPP"]]
   X_feats_scaled = (X_feats - X_feats.mean()) / X_feats.std()
 
   # generate transformed features
@@ -109,16 +109,21 @@ def train_improvement_model(scores_df: pd.DataFrame) -> np.array:
   # train model
   model = line_of_best_fit(X_played, y)
 
-  return model
+  return {
+    "model": model,
+    "X": X_played,
+    "y": y,
+    "type": "improvement"
+  }
 
-def train_unplayed_model(scores_df: pd.DataFrame) -> np.array:
+def train_unplayed_model(scores_df: pd.DataFrame) -> dict:
   """ Trains the model for potential scores on unplayed maps using exponential regression.
 
   Params:
     scores_df (df): The DataFrame of player scores
 
   Returns:
-    model (arr): 1d array where the coefficients correspond to the inverted stars feature
+    model (dict): 1d array where the coefficients correspond to the inverted stars feature, along with X, y, and model type
   """
 
   # set accuracy as dependent variable and invert to mimic declining trend
@@ -126,9 +131,14 @@ def train_unplayed_model(scores_df: pd.DataFrame) -> np.array:
   y_inv_log = np.log(y_inv)
 
   # use stars as X-feature
-  X_unplayed = scores_df["stars"].to_numpy().reshape(-1, 1)
+  X_unplayed = scores_df["mod_stars"].to_numpy().reshape(-1, 1)
 
   # train model
   model = line_of_best_fit(X_unplayed, y_inv_log)
 
-  return model
+  return { 
+    "model": model,
+    "X": X_unplayed,
+    "y": y_inv_log,
+    "type": "unplayed"
+  }

@@ -66,8 +66,8 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
       for rating in RATINGS:
         base_rating = diff_data[rating]
         modified_rating = calc_modified_rating(base_rating, rating, difficulty["modifiersRating"], modifiers)
-        diff_data[rating] = modified_rating
-      diff_data["stars"] = calc_pp_from_accuracy(0.96, *[diff_data[rating] for rating in RATINGS])["total_pp"] / 52
+        diff_data[f"mod_{rating}"] = modified_rating
+      diff_data[f"mod_stars"] = calc_pp_from_accuracy(0.96, *[diff_data[rating] for rating in RATINGS])["total_pp"] / 52
 
       # convert map type and time set
       diff_data["type"] = MAP_TYPES.get(diff_data["type"], "Unknown")
@@ -114,6 +114,10 @@ def fetch_maps() -> pd.DataFrame:
       for difficulty in ranked_map["difficulties"]:
         metadata["leaderboardId"] = difficulty["leaderboardId"]
         diff_data = { key: difficulty[key] for key in difficulty_keys }
+        
+        # mod ratings stay the same since there are no mods
+        for rating in ["stars"] + RATINGS:
+          diff_data[f"mod_{rating}"] = diff_data[rating]
 
         # convert map type
         diff_data["type"] = MAP_TYPES.get(diff_data["type"], "Unknown")

@@ -52,9 +52,8 @@ def predict_score(level, vector, model_dict):
     "mapper":             level["mapper"],
     "difficulty":         level["difficultyName"],
     "stars":              level["stars"],
+    **pred_metrics
   }
-
-
 
 def predict_scores(scores_df: pd.DataFrame, maps_df: pd.DataFrame, improve_dict: dict, unplayed_dict: dict) -> pd.DataFrame:
   """ Predict performance on all ranked maps (both played and unplayed) using the 

@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from pp import calc_pp_from_accuracy, weight_curve
+from pp import calc_pp_from_accuracy, WEIGHT_CURVE
 
 RELEVANT_KEYS = [
   'leaderboardId', 'downloadId', 'cover', 'fullCover', 
@@ -87,8 +87,8 @@ def predict_scores(scores_df: pd.DataFrame, maps_df: pd.DataFrame, improve_dict:
   weight_idx = 0
 
   for idx, row in predictions_df.iterrows():
-    if weight_idx < len(weight_curve):
-      weights[idx] = weight_curve[weight_idx]
+    if weight_idx < len(WEIGHT_CURVE):
+      weights[idx] = WEIGHT_CURVE[weight_idx]
       if row["status"] == "improvement":
         weight_idx += 1
 

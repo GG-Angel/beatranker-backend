@@ -1,144 +1,124 @@
 import numpy as np
 import pandas as pd
-from sklearn.metrics import r2_score
-from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import PolynomialFeatures
+from pp import WEIGHT_CURVE, calc_pp_from_accuracy
+from utils import filter_unplayed
 
-def add_bias_column(X):
-    """ Adds a y-intercept bias column to the given array.
+# data given by predictions
+PRED_FEATURES = ['leaderboardId', 'songId', 'cover', 'fullCover', 'name', 'subName',
+                 'author', 'mapper', 'bpm', 'duration', 'difficultyName', 'type',
+                 'stars', 'passRating', 'accRating', 'techRating', 
+                 'mod_stars','mod_passRating', 'mod_accRating', 'mod_techRating', 
+                 "status", "modifiers", "current_acc", "pred_acc", "acc_gain",
+                 "current_pp", "pred_pp", "max_pp",
+                 "unweighted_pp_gain", "weighted_pp_gain", "weights"]
 
-    Args:
-      X (arr): Can be 1-d or 2-d
-    
-    Returns:
-      Xnew (arr): The same array, but 2-d with a column of 1's in the first spot
-    """
-    
-    # If the array is 1-d
-    if len(X.shape) == 1:
-      Xnew = np.column_stack([np.ones(X.shape[0]), X])
-    
-    # If the array is 2-d
-    elif len(X.shape) == 2:
-      bias_col = np.ones((X.shape[0], 1))
-      Xnew = np.hstack([bias_col, X])
-        
-    else:
-      raise ValueError("Input array must be either 1-d or 2-d")
-
-    return Xnew
-
-def line_of_best_fit(X: np.array, y: np.array):
-  """ Projects y onto the span of X to obtain the slope and y-intercept vector for the line of best fit.
-
+def train_model(scores_df: pd.DataFrame) -> np.array:
+  """ Trains an exponential regression model on the player's existing scores, which predicts accuracy using a map's difficulty ratings. 
+  
   Params:
-    X (1d-2d array): The array of predictor values
-    y (1d array): The array of corresponding response values to X
+    scores_df (df): The player's existing ranked scores
 
   Returns:
-    m (2x1 vector): The vector containing the coefficients for the line of best fit,
-    where the 1st term is the y-intercept and the 2nd term is the slope.
+    model (arr): 1d array where the coef. correspond to the polynomial X-features; includes a bias coef. at index 0 for the y-intercept.
   """
 
-  # add the bias column to X
-  X = add_bias_column(X)
+  # calculate days since scores were set
+  max_date = scores_df["dateset"].max()
+  days_since = (max_date - scores_df["dateset"]).dt.days
 
-  # use the formula to obtain the slope and y-intercept vector of the line of best fit
-  XtXinv = np.linalg.inv(np.matmul(X.T, X))
-  Xty = np.matmul(X.T, y)
-  return np.matmul(XtXinv, Xty)
+  # apply weighted decay function so newer scores have more influence
+  lambda_value = 0.1
+  decay_weights = np.exp(-lambda_value * days_since / 14) # 2 weeks
+  
+  # modified ratings as independent variables
+  X = scores_df[["mod_passRating", "mod_accRating", "mod_techRating"]].values.reshape(-1, 3)
+  X_poly = PolynomialFeatures(degree=2, include_bias=False).fit_transform(X)
 
-def linreg_predict(Xnew, ynew, m):
-  """ Compute the residuals, mean squared error, and r2 between the true and predicted y-values with the line of best fit.
-
-  Params:
-    Xnew (1d-2d array): The array of predictor values
-    ynew (1d array): The array of corresponding response values to Xnew
-    m (2x1 vector): The vector containing the coefficients for the line of best fit from the line_of_best_fit() function
-
-  Returns:
-    result (dict): A dictionary containing information about the line of best fit.
-    - ypreds: The predicted y-values from applying m to Xnew
-    - resids: The residuals (differences) between the true and predicted y-values
-    - mse: The mean squared error between ynew and ypreds
-    - r2: The coefficient of determination representing the proportion of variability in ynew explained by the lobf
-  """
-
-  # compute predicted y-values based on dimensions of Xnew
-  ypreds = (Xnew * m[1] + m[0]) if Xnew.ndim == 1 else (np.dot(Xnew, m[1:]) + m[0])
-
-  # get residuals, mean squared errror, and r2
-  resids = ynew - ypreds
-  mse = (resids**2).mean()
-  r2 = r2_score(ynew, ypreds) 
-
-  return {
-    "ypreds": ypreds,
-    "resids": resids,
-    "mse": mse,
-    "r2": r2
-  }
-
-def train_improvement_model(scores_df: pd.DataFrame) -> dict:
-  """ Trains the model for improving existing scores using polynomial regression.
-
-  Params:
-    scores_df (df): The DataFrame of player scores
-
-  Returns:
-    model (dict): 1d array where the coefficients correspond to the rating and pp features, along with X, y and model type
-  """
-
-  # set accuracy as dependent variable
-  y = scores_df["accuracy"].to_numpy().reshape(-1, 1)
-
-  # standardize X-features
-  X_feats = scores_df[["mod_passRating", "mod_accRating", "mod_techRating", "passPP", "accPP", "techPP"]]
-  X_feats_scaled = (X_feats - X_feats.mean()) / X_feats.std()
-
-  # generate transformed features
-  X_played = np.column_stack([
-      X_feats_scaled.to_numpy(),
-      X_feats_scaled["passRating"] * X_feats_scaled["passPP"],
-      X_feats_scaled["accRating"] * X_feats_scaled["accPP"],
-      X_feats_scaled["techRating"] * X_feats_scaled["techPP"],
-      np.exp(X_feats_scaled["passPP"]),
-      np.exp(X_feats_scaled["accPP"]),
-      np.exp(X_feats_scaled["techPP"])
-  ])
-
-  # train model
-  model = line_of_best_fit(X_played, y)
-
-  return {
-    "model": model,
-    "X": X_played,
-    "y": y,
-    "type": "improvement"
-  }
-
-def train_unplayed_model(scores_df: pd.DataFrame) -> dict:
-  """ Trains the model for potential scores on unplayed maps using exponential regression.
-
-  Params:
-    scores_df (df): The DataFrame of player scores
-
-  Returns:
-    model (dict): 1d array where the coefficients correspond to the inverted stars feature, along with X, y, and model type
-  """
-
-  # set accuracy as dependent variable and invert to mimic declining trend
+  # dependent variable; invert to mimic downward curve
   y_inv = (1 - scores_df["accuracy"]).to_numpy().reshape(-1, 1)
   y_inv_log = np.log(y_inv)
 
-  # use stars as X-feature
-  X_unplayed = scores_df["mod_stars"].to_numpy().reshape(-1, 1)
+  # set up lobf equation
+  W = np.diag(decay_weights)
+  X_poly_bias = np.column_stack([np.ones(X_poly.shape[0]), X_poly])
+  XtW = np.matmul(X_poly_bias.T, W)
+  XtWX_inv = np.linalg.inv(np.matmul(XtW, X_poly_bias))
+  XtWy = np.matmul(XtW, y_inv_log)
 
-  # train model
-  model = line_of_best_fit(X_unplayed, y_inv_log)
+  # generate model
+  model = np.matmul(XtWX_inv, XtWy)
 
-  return { 
-    "model": model,
-    "X": X_unplayed,
-    "y": y_inv_log,
-    "type": "unplayed"
-  }
+  return model
+
+def apply_weight_curve(pred_df: pd.DataFrame) -> pd.DataFrame:
+  """ Applies the BeatLeader weight curve to the predicted scores to get the actual pp earned for that score. 
+  
+  Params:
+    pred_df (df): Contains both played and unplayed maps
+
+  Returns:
+    weighted_df (df): The same dataframe, but with columns for weighted pp gain and the weights applied
+  """
+
+  # sort by descending pp
+  weighted_df = pred_df.copy()  
+  weighted_df = weighted_df.sort_values(by="max_pp", ascending=False)
+  current_pp = weighted_df["current_pp"].sort_values(ascending=False).to_numpy()
+
+  # set up weight scaler
+  weights = np.zeros(len(pred_df))
+  weight_idx = 0
+  curve_idx = 0
+
+  # apply the weights according to where they would fit in the player's current scores
+  for _, row in weighted_df.iterrows():
+    if curve_idx < len(WEIGHT_CURVE) - 1 and row["max_pp"] < current_pp[curve_idx]:
+      curve_idx += 1
+    weights[weight_idx] = WEIGHT_CURVE[curve_idx]
+    weight_idx += 1
+
+  # add weighted data  
+  weighted_df["weighted_pp_gain"] = weighted_df["unweighted_pp_gain"] * weights
+  weighted_df["weights"] = weights
+
+  return weighted_df
+
+def predict_scores(model: np.array, scores_df: pd.DataFrame, maps_df: pd.DataFrame) -> pd.DataFrame:
+  """ Generates the player's potential accuracy and pp on every ranked map using the ML model. 
+  
+  Params:
+    model (arr): 1d array where the coef. correspond to the polynomial X-features; includes a bias coef. at index 0 for the y-intercept
+    scores_df (df): The player's existing scores
+    maps_df (df): All ranked maps on BeatLeader
+
+  Returns:
+    pred_df (df): Contains map information, difficulty, and prediction metrics
+  """
+  
+  # distinguish maps the player has and hasn't yet played
+  unplayed_df = filter_unplayed(scores_df, maps_df)
+  scores_df["status"] = "played"; unplayed_df["status"] = "unplayed"
+  pred_df = pd.concat([scores_df, unplayed_df], ignore_index=True)
+
+  # set up model input features
+  X = pred_df[["mod_passRating", "mod_accRating", "mod_techRating"]].values.reshape(-1, 3)
+  X_poly = PolynomialFeatures(degree=2, include_bias=False).fit_transform(X)
+
+  # get accuracy prediction metrics
+  pred_df["current_acc"] = np.where(~pred_df["accuracy"].isna(), pred_df["accuracy"], 0)
+  pred_df["pred_acc"] = np.minimum(1, 1 - np.exp(np.dot(X_poly, model[1:]) + model[0]))
+  pred_df["acc_gain"] = np.maximum(0, pred_df["pred_acc"] - pred_df["current_acc"])
+
+  # get pp prediction metrics
+  pred_df["current_pp"] = np.where(~pred_df["pp"].isna(), pred_df["pp"], 0)
+  pred_df["pred_pp"] = pred_df.apply(lambda row: calc_pp_from_accuracy(
+    row["pred_acc"], row["mod_passRating"], row["mod_accRating"], row["mod_techRating"])["total_pp"], 
+    axis=1)
+  pred_df["max_pp"] = np.maximum(pred_df["current_pp"], pred_df["pred_pp"])
+
+  # generate pp gain per map
+  pred_df["unweighted_pp_gain"] = np.maximum(0, pred_df["pred_pp"] - pred_df["current_pp"])
+  pred_df = apply_weight_curve(pred_df)
+
+  return pred_df[PRED_FEATURES]

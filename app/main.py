@@ -7,12 +7,40 @@ app = FastAPI()
 
 # schema
 class Recommendation(BaseModel):
-  map_name: str
-  star_rating: float
-  predicted_pp: float
+  leaderboardId: str
+  songId: str
+  cover: str
+  fullCover: str
+  name: str
+  subName: str
+  author: str
+  mapper: str
+  bpm: float
+  duration: int
+  difficultyName: str
+  type: str
+  stars: float
+  passRating: float
+  accRating: float
+  techRating: float
+  starsMod: float
+  passRatingMod: float
+  accRatingMod: float
+  techRatingMod: float
+  status: str
+  modifiers: list[str]
+  currentAccuracy: float
+  predictedAccuracy: float
+  accuracyGained: float
+  currentPP: float
+  predictedPP: float
+  maxPP: float
+  unweightedPPGain: float
+  weightedPPGain: float
+  weight: float
 
 @app.get("/recommendations", response_model=List[Recommendation])
-async def get_recommendations(playerId: str):
+async def get_recommendations(player_id: str):
   # logic here
 
   # example data

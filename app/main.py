@@ -1,21 +1,65 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-from typing import List
 import pandas as pd
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List, Optional
+
+from app.fetcher import fetch_scores
+from app.models import predict_scores, train_model
+from app.utils import df_to_json
 
 app = FastAPI()
 
 # schema
 class Recommendation(BaseModel):
-  map_name: str
-  star_rating: float
-  predicted_pp: float
+  leaderboardId: str
+  songId: str
+  cover: str
+  fullCover: str
+  name: str
+  subName: Optional[str]
+  author: str
+  mapper: str
+  bpm: float
+  duration: int
+  difficultyName: str
+  type: str
+  stars: float
+  passRating: float
+  accRating: float
+  techRating: float
+  starsMod: float
+  passRatingMod: float
+  accRatingMod: float
+  techRatingMod: float
+  status: str
+  modifiers: Optional[List[str]]
+  currentAccuracy: float
+  predictedAccuracy: float
+  accuracyGained: float
+  currentPP: float
+  predictedPP: float
+  maxPP: float
+  unweightedPPGain: float
+  weightedPPGain: float
+  weight: float
 
-@app.get("/recommendations", response_model=List[Recommendation])
-async def get_recommendations(playerId: str):
-  # logic here
+@app.get("/recommendations/{player_id}", response_model=List[Recommendation])
+async def get_recommendations(player_id: str):
+  
+  # TODO: Player ID validation
 
-  # example data
-  data = [{"map_name": "Map 1", "star_rating": 4.5, "predicted_pp": 280},
-          {"map_name": "Map 2", "star_rating": 5.0, "predicted_pp": 320}]
-  return data
+  try:
+    print("Fetching maps...")
+    maps_df = pd.read_csv("./app/ranked_maps.csv")
+    print("Fetching scores...")
+    scores_df = fetch_scores(player_id)
+  except:
+    raise HTTPException(status_code=500, detail="Failed to fetch.")
+
+  print("Training model...")
+  model = train_model(scores_df)
+  print("Predicting scores...")
+  pred_df = predict_scores(model, scores_df, maps_df)
+
+  return df_to_json(pred_df)

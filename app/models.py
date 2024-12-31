@@ -1,17 +1,17 @@
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import PolynomialFeatures
-from pp import WEIGHT_CURVE, calc_pp_from_accuracy
-from utils import filter_unplayed
+from app.pp import WEIGHT_CURVE, calc_pp_from_accuracy
+from app.utils import filter_unplayed
 
 # data given by predictions
 PRED_FEATURES = ['leaderboardId', 'songId', 'cover', 'fullCover', 'name', 'subName',
                  'author', 'mapper', 'bpm', 'duration', 'difficultyName', 'type',
                  'stars', 'passRating', 'accRating', 'techRating', 
-                 'mod_stars','mod_passRating', 'mod_accRating', 'mod_techRating', 
-                 "status", "modifiers", "current_acc", "pred_acc", "acc_gain",
-                 "current_pp", "pred_pp", "max_pp",
-                 "unweighted_pp_gain", "weighted_pp_gain", "weights"]
+                 'starsMod', 'passRatingMod', 'accRatingMod', 'techRatingMod', 
+                 "status", "modifiers", "currentAccuracy", "predictedAccuracy", "accuracyGained",
+                 "currentPP", "predictedPP", "maxPP",
+                 "unweightedPPGain", "weightedPPGain", "weight"]
 
 def train_model(scores_df: pd.DataFrame) -> np.array:
   """ Trains an exponential regression model on the player's existing scores, which predicts accuracy using a map's difficulty ratings. 
@@ -32,7 +32,7 @@ def train_model(scores_df: pd.DataFrame) -> np.array:
   decay_weights = np.exp(-lambda_value * days_since / 14) # 2 weeks
   
   # modified ratings as independent variables
-  X = scores_df[["mod_passRating", "mod_accRating", "mod_techRating"]].values.reshape(-1, 3)
+  X = scores_df[["passRatingMod", "accRatingMod", "techRatingMod"]].values.reshape(-1, 3)
   X_poly = PolynomialFeatures(degree=2, include_bias=False).fit_transform(X)
 
   # dependent variable; invert to mimic downward curve
@@ -63,8 +63,8 @@ def apply_weight_curve(pred_df: pd.DataFrame) -> pd.DataFrame:
 
   # sort by descending pp
   weighted_df = pred_df.copy()  
-  weighted_df = weighted_df.sort_values(by="max_pp", ascending=False)
-  current_pp = weighted_df["current_pp"].sort_values(ascending=False).to_numpy()
+  weighted_df = weighted_df.sort_values(by="maxPP", ascending=False)
+  current_pp = weighted_df["currentPP"].sort_values(ascending=False).to_numpy()
 
   # set up weight scaler
   weights = np.zeros(len(pred_df))
@@ -73,14 +73,14 @@ def apply_weight_curve(pred_df: pd.DataFrame) -> pd.DataFrame:
 
   # apply the weights according to where they would fit in the player's current scores
   for _, row in weighted_df.iterrows():
-    if curve_idx < len(WEIGHT_CURVE) - 1 and row["max_pp"] < current_pp[curve_idx]:
-      curve_idx += 1
+    if curve_idx == len(WEIGHT_CURVE) - 1: break
+    if row["maxPP"] < current_pp[curve_idx]: curve_idx += 1
     weights[weight_idx] = WEIGHT_CURVE[curve_idx]
     weight_idx += 1
 
   # add weighted data  
-  weighted_df["weighted_pp_gain"] = weighted_df["unweighted_pp_gain"] * weights
-  weighted_df["weights"] = weights
+  weighted_df["weightedPPGain"] = weighted_df["unweightedPPGain"] * weights
+  weighted_df["weight"] = weights
 
   return weighted_df
 
@@ -102,23 +102,23 @@ def predict_scores(model: np.array, scores_df: pd.DataFrame, maps_df: pd.DataFra
   pred_df = pd.concat([scores_df, unplayed_df], ignore_index=True)
 
   # set up model input features
-  X = pred_df[["mod_passRating", "mod_accRating", "mod_techRating"]].values.reshape(-1, 3)
+  X = pred_df[["passRatingMod", "accRatingMod", "techRatingMod"]].values.reshape(-1, 3)
   X_poly = PolynomialFeatures(degree=2, include_bias=False).fit_transform(X)
 
   # get accuracy prediction metrics
-  pred_df["current_acc"] = np.where(~pred_df["accuracy"].isna(), pred_df["accuracy"], 0)
-  pred_df["pred_acc"] = np.minimum(1, 1 - np.exp(np.dot(X_poly, model[1:]) + model[0]))
-  pred_df["acc_gain"] = np.maximum(0, pred_df["pred_acc"] - pred_df["current_acc"])
+  pred_df["currentAccuracy"] = np.where(~pred_df["accuracy"].isna(), pred_df["accuracy"], 0)
+  pred_df["predictedAccuracy"] = np.minimum(1, 1 - np.exp(np.dot(X_poly, model[1:]) + model[0]))
+  pred_df["accuracyGained"] = np.maximum(0, pred_df["predictedAccuracy"] - pred_df["currentAccuracy"])
 
   # get pp prediction metrics
-  pred_df["current_pp"] = np.where(~pred_df["pp"].isna(), pred_df["pp"], 0)
-  pred_df["pred_pp"] = pred_df.apply(lambda row: calc_pp_from_accuracy(
-    row["pred_acc"], row["mod_passRating"], row["mod_accRating"], row["mod_techRating"])["total_pp"], 
+  pred_df["currentPP"] = np.where(~pred_df["pp"].isna(), pred_df["pp"], 0)
+  pred_df["predictedPP"] = pred_df.apply(lambda row: calc_pp_from_accuracy(
+    row["predictedAccuracy"], row["passRatingMod"], row["accRatingMod"], row["techRatingMod"])["total_pp"], 
     axis=1)
-  pred_df["max_pp"] = np.maximum(pred_df["current_pp"], pred_df["pred_pp"])
+  pred_df["maxPP"] = np.maximum(pred_df["currentPP"], pred_df["predictedPP"])
 
   # generate pp gain per map
-  pred_df["unweighted_pp_gain"] = np.maximum(0, pred_df["pred_pp"] - pred_df["current_pp"])
+  pred_df["unweightedPPGain"] = np.maximum(0, pred_df["predictedPP"] - pred_df["currentPP"])
   pred_df = apply_weight_curve(pred_df)
 
   return pred_df[PRED_FEATURES]

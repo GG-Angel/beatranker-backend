@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 from datetime import datetime
-from pp import calc_modified_rating, calc_pp_from_accuracy
+from app.pp import calc_modified_rating, calc_pp_from_accuracy
 
 # map type conversions
 MAP_TYPES = { 
@@ -14,6 +14,10 @@ MAP_TYPES = {
 # split map ratings
 RATINGS = ["passRating", "accRating", "techRating"]
 
+class APIError(Exception):
+  """ Custom exception for API-related errors. """
+  pass
+
 def fetch_scores(player_id: str) -> pd.DataFrame:
   """ Gets every ranked score set by a player on BeatLeader.
 
@@ -22,6 +26,9 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
 
   Returns:
     scores_df (df): Every ranked score sorted by descending PP
+
+  Raises:
+    APIError: If a call to the BeatLeader API fails or returns a non-200 status code
   """
 
   # datapoints of interest
@@ -35,7 +42,9 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
   while True:
     url = f"https://api.beatleader.xyz/player/{player_id}/scores?sortBy=pp&order=desc&page={page}&count=10&type=ranked"
     resp = requests.get(url)
-    if (resp.status_code != 200): break
+    if (resp.status_code != 200): 
+      break
+      # raise APIError(f"Failed to fetch scores for {player_id}. Response: {resp.text}")
 
     scores = resp.json()["data"]
     if not scores: break
@@ -58,12 +67,12 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
       score_data = { key: score[key] for key in score_keys }
 
       # apply modifiers
-      modifiers = score.get("modifiers", "").split(",")
+      modifiers = score_data["modifiers"] = score.get("modifiers", "").split(",")
       for rating in RATINGS:
         base_rating = diff_data[rating]
         modified_rating = calc_modified_rating(base_rating, rating, difficulty["modifiersRating"], modifiers)
-        diff_data[f"mod_{rating}"] = modified_rating
-      diff_data[f"mod_stars"] = calc_pp_from_accuracy(0.96, *[diff_data[rating] for rating in RATINGS])["total_pp"] / 52
+        diff_data[f"{rating}Mod"] = modified_rating
+      diff_data[f"starsMod"] = calc_pp_from_accuracy(0.96, *[diff_data[rating] for rating in RATINGS])["total_pp"] / 52
 
       # convert map type and time set
       diff_data["type"] = MAP_TYPES.get(diff_data["type"], "Unknown")
@@ -80,7 +89,14 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
   return scores_df
 
 def fetch_maps() -> pd.DataFrame:
-  """ Gets every ranked map that exists on BeatLeader. """
+  """ Gets every ranked map that exists on BeatLeader. 
+  
+  Returns:
+    maps_df (df): Contains song and difficulty information
+
+  Raises:
+    APIError: If a call to the BeatLeader API fails or returns a non-200 status code
+  """
 
   # datapoints of interest
   song_keys = ['name', 'subName', 'author', 'mapper', 'bpm', 'duration']
@@ -93,7 +109,9 @@ def fetch_maps() -> pd.DataFrame:
     # fetch data from beatleader api
     url = f"https://api.beatleader.xyz/maps?page={page}&count=10&type=ranked"
     resp = requests.get(url)
-    if (resp.status_code != 200): break 
+    if (resp.status_code != 200): 
+      break
+      # raise APIError(f"Failed to fetch ranked maps. Response: {resp.text}") 
 
     maps = resp.json()["data"]
     if not maps: break
@@ -113,7 +131,7 @@ def fetch_maps() -> pd.DataFrame:
         
         # mod ratings stay the same since there are no mods
         for rating in ["stars"] + RATINGS:
-          diff_data[f"mod_{rating}"] = diff_data[rating]
+          diff_data[f"{rating}Mod"] = diff_data[rating]
 
         # convert map type
         diff_data["type"] = MAP_TYPES.get(diff_data["type"], "Unknown")

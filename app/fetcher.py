@@ -14,6 +14,10 @@ MAP_TYPES = {
 # split map ratings
 RATINGS = ["passRating", "accRating", "techRating"]
 
+class APIError(Exception):
+  """ Custom exception for API-related errors. """
+  pass
+
 def fetch_scores(player_id: str) -> pd.DataFrame:
   """ Gets every ranked score set by a player on BeatLeader.
 
@@ -22,6 +26,9 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
 
   Returns:
     scores_df (df): Every ranked score sorted by descending PP
+
+  Raises:
+    APIError: If a call to the BeatLeader API fails or returns a non-200 status code
   """
 
   # datapoints of interest
@@ -35,7 +42,8 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
   while True:
     url = f"https://api.beatleader.xyz/player/{player_id}/scores?sortBy=pp&order=desc&page={page}&count=10&type=ranked"
     resp = requests.get(url)
-    if (resp.status_code != 200): break
+    if (resp.status_code != 200): 
+      raise APIError(f"Failed to fetch scores for {player_id}. Response: {resp.text}")
 
     scores = resp.json()["data"]
     if not scores: break
@@ -84,6 +92,9 @@ def fetch_maps() -> pd.DataFrame:
   
   Returns:
     maps_df (df): Contains song and difficulty information
+
+  Raises:
+    APIError: If a call to the BeatLeader API fails or returns a non-200 status code
   """
 
   # datapoints of interest
@@ -97,7 +108,8 @@ def fetch_maps() -> pd.DataFrame:
     # fetch data from beatleader api
     url = f"https://api.beatleader.xyz/maps?page={page}&count=10&type=ranked"
     resp = requests.get(url)
-    if (resp.status_code != 200): break 
+    if (resp.status_code != 200): 
+      raise APIError(f"Failed to fetch ranked maps. Response: {resp.text}") 
 
     maps = resp.json()["data"]
     if not maps: break

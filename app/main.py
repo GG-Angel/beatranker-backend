@@ -1,7 +1,8 @@
+import pandas as pd
+
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
-import pandas as pd
 
 app = FastAPI()
 
@@ -46,4 +47,4 @@ async def get_recommendations(player_id: str):
   # example data
   data = [{"map_name": "Map 1", "star_rating": 4.5, "predicted_pp": 280},
           {"map_name": "Map 2", "star_rating": 5.0, "predicted_pp": 320}]
-  return data
+  pass

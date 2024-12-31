@@ -11,7 +11,7 @@ PRED_FEATURES = ['leaderboardId', 'songId', 'cover', 'fullCover', 'name', 'subNa
                  'starsMod', 'passRatingMod', 'accRatingMod', 'techRatingMod', 
                  "status", "modifiers", "currentAccuracy", "predictedAccuracy", "accuracyGained",
                  "currentPP", "predictedPP", "maxPP",
-                 "unweightedPPGain", "weightedPPGain", "weights"]
+                 "unweightedPPGain", "weightedPPGain", "weight"]
 
 def train_model(scores_df: pd.DataFrame) -> np.array:
   """ Trains an exponential regression model on the player's existing scores, which predicts accuracy using a map's difficulty ratings. 
@@ -80,7 +80,7 @@ def apply_weight_curve(pred_df: pd.DataFrame) -> pd.DataFrame:
 
   # add weighted data  
   weighted_df["weightedPPGain"] = weighted_df["unweightedPPGain"] * weights
-  weighted_df["weights"] = weights
+  weighted_df["weight"] = weights
 
   return weighted_df
 

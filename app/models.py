@@ -73,8 +73,8 @@ def apply_weight_curve(pred_df: pd.DataFrame) -> pd.DataFrame:
 
   # apply the weights according to where they would fit in the player's current scores
   for _, row in weighted_df.iterrows():
-    if curve_idx < len(WEIGHT_CURVE) - 1 and row["maxPP"] < current_pp[curve_idx]:
-      curve_idx += 1
+    if curve_idx == len(WEIGHT_CURVE) - 1: break
+    if row["maxPP"] < current_pp[curve_idx]: curve_idx += 1
     weights[weight_idx] = WEIGHT_CURVE[curve_idx]
     weight_idx += 1
 

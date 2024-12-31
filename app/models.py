@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import PolynomialFeatures
-from pp import WEIGHT_CURVE, calc_pp_from_accuracy
-from utils import filter_unplayed
+from app.pp import WEIGHT_CURVE, calc_pp_from_accuracy
+from app.utils import filter_unplayed
 
 # data given by predictions
 PRED_FEATURES = ['leaderboardId', 'songId', 'cover', 'fullCover', 'name', 'subName',

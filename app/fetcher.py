@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 from datetime import datetime
-from pp import calc_modified_rating, calc_pp_from_accuracy
+from app.pp import calc_modified_rating, calc_pp_from_accuracy
 
 # map type conversions
 MAP_TYPES = { 
@@ -43,7 +43,8 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
     url = f"https://api.beatleader.xyz/player/{player_id}/scores?sortBy=pp&order=desc&page={page}&count=10&type=ranked"
     resp = requests.get(url)
     if (resp.status_code != 200): 
-      raise APIError(f"Failed to fetch scores for {player_id}. Response: {resp.text}")
+      break
+      # raise APIError(f"Failed to fetch scores for {player_id}. Response: {resp.text}")
 
     scores = resp.json()["data"]
     if not scores: break
@@ -66,7 +67,7 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
       score_data = { key: score[key] for key in score_keys }
 
       # apply modifiers
-      modifiers = score_data["modifiers"] = score_data["modifiers"].split(",")
+      modifiers = score_data["modifiers"] = score.get("modifiers", "").split(",")
       for rating in RATINGS:
         base_rating = diff_data[rating]
         modified_rating = calc_modified_rating(base_rating, rating, difficulty["modifiersRating"], modifiers)
@@ -109,7 +110,8 @@ def fetch_maps() -> pd.DataFrame:
     url = f"https://api.beatleader.xyz/maps?page={page}&count=10&type=ranked"
     resp = requests.get(url)
     if (resp.status_code != 200): 
-      raise APIError(f"Failed to fetch ranked maps. Response: {resp.text}") 
+      break
+      # raise APIError(f"Failed to fetch ranked maps. Response: {resp.text}") 
 
     maps = resp.json()["data"]
     if not maps: break

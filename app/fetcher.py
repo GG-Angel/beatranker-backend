@@ -58,7 +58,7 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
       score_data = { key: score[key] for key in score_keys }
 
       # apply modifiers
-      modifiers = score.get("modifiers", "").split(",")
+      modifiers = score_data["modifiers"] = score_data["modifiers"].split(",")
       for rating in RATINGS:
         base_rating = diff_data[rating]
         modified_rating = calc_modified_rating(base_rating, rating, difficulty["modifiersRating"], modifiers)

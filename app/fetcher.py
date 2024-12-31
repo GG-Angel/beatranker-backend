@@ -62,8 +62,8 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
       for rating in RATINGS:
         base_rating = diff_data[rating]
         modified_rating = calc_modified_rating(base_rating, rating, difficulty["modifiersRating"], modifiers)
-        diff_data[f"mod_{rating}"] = modified_rating
-      diff_data[f"mod_stars"] = calc_pp_from_accuracy(0.96, *[diff_data[rating] for rating in RATINGS])["total_pp"] / 52
+        diff_data[f"{rating}Mod"] = modified_rating
+      diff_data[f"starsMod"] = calc_pp_from_accuracy(0.96, *[diff_data[rating] for rating in RATINGS])["total_pp"] / 52
 
       # convert map type and time set
       diff_data["type"] = MAP_TYPES.get(diff_data["type"], "Unknown")
@@ -80,7 +80,11 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
   return scores_df
 
 def fetch_maps() -> pd.DataFrame:
-  """ Gets every ranked map that exists on BeatLeader. """
+  """ Gets every ranked map that exists on BeatLeader. 
+  
+  Returns:
+    maps_df (df): Contains song and difficulty information
+  """
 
   # datapoints of interest
   song_keys = ['name', 'subName', 'author', 'mapper', 'bpm', 'duration']
@@ -113,7 +117,7 @@ def fetch_maps() -> pd.DataFrame:
         
         # mod ratings stay the same since there are no mods
         for rating in ["stars"] + RATINGS:
-          diff_data[f"mod_{rating}"] = diff_data[rating]
+          diff_data[f"{rating}Mod"] = diff_data[rating]
 
         # convert map type
         diff_data["type"] = MAP_TYPES.get(diff_data["type"], "Unknown")

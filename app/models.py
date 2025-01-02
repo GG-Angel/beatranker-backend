@@ -9,7 +9,8 @@ PRED_FEATURES = ['leaderboardId', 'songId', 'cover', 'fullCover', 'name', 'subNa
                  'author', 'mapper', 'bpm', 'duration', 'difficultyName', 'type',
                  'stars', 'passRating', 'accRating', 'techRating', 
                  'starsMod', 'passRatingMod', 'accRatingMod', 'techRatingMod', 
-                 "status", "modifiers", "currentAccuracy", "predictedAccuracy", "accuracyGained",
+                 "status", "modifiers", "rank", 
+                 "currentAccuracy", "predictedAccuracy", "accuracyGained",
                  "currentPP", "predictedPP", "maxPP",
                  "unweightedPPGain", "weightedPPGain", "weight"]
 

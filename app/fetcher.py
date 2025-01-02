@@ -2,6 +2,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 from app.pp import calc_modified_rating, calc_pp_from_accuracy
+from app.utils import time_ago
 
 # map type conversions
 MAP_TYPES = { 
@@ -76,7 +77,8 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
 
       # convert map type and time set
       diff_data["type"] = MAP_TYPES.get(diff_data["type"], "Unknown")
-      score_data["dateset"] = datetime.fromtimestamp(score["timepost"])
+      date_set = score_data["dateset"] = datetime.fromtimestamp(score["timepost"])
+      score_data["timeAgo"] = time_ago(date_set)
 
       # append score row
       score_rows.append({**metadata, **song_data, **diff_data, **score_data})

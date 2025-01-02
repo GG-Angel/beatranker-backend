@@ -35,6 +35,7 @@ class Recommendation(BaseModel):
   status: str
   modifiers: Optional[List[str]]
   rank: Optional[int]
+  timeAgo: Optional[str]
   currentAccuracy: float
   predictedAccuracy: float
   accuracyGained: float

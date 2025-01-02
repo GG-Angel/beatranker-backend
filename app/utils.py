@@ -1,6 +1,12 @@
 import json
+import requests
 import pandas as pd
 from datetime import datetime
+
+def is_valid_id(player_id: str) -> bool:
+    url = f"https://api.beatleader.xyz/player/{player_id}/exists"
+    resp = requests.get(url)
+    return resp.status_code == 200
 
 def filter_unplayed(scores_df: pd.DataFrame, maps_df: pd.DataFrame) -> pd.DataFrame: 
   bool_unplayed = ~maps_df["leaderboardId"].isin(scores_df["leaderboardId"])

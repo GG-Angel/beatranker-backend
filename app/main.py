@@ -1,3 +1,4 @@
+import requests
 import pandas as pd
 
 from fastapi import FastAPI, HTTPException
@@ -49,9 +50,6 @@ class Recommendation(BaseModel):
 
 @app.get("/recommendations/{player_id}", response_model=List[Recommendation])
 async def get_recommendations(player_id: str):
-  
-  # TODO: Player ID validation
-
   try:
     print("Fetching maps...")
     maps_df = pd.read_csv("./app/ranked_maps.csv")

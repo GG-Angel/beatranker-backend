@@ -122,4 +122,8 @@ def predict_scores(model: np.array, scores_df: pd.DataFrame, maps_df: pd.DataFra
   pred_df["unweightedPPGain"] = np.maximum(0, pred_df["predictedPP"] - pred_df["currentPP"])
   pred_df = apply_weight_curve(pred_df)
 
+  # remove empty modifiers
+  for col in ["currentMods", "predictedMods"]:
+    pred_df[col] = pred_df[col].apply(lambda x: np.nan if not x else x)
+
   return pred_df[PRED_FEATURES]

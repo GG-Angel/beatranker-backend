@@ -33,9 +33,10 @@ class Recommendation(BaseModel):
   accRatingMod: float
   techRatingMod: float
   status: str
-  modifiers: Optional[List[str]]
   rank: Optional[int]
   timeAgo: Optional[str]
+  currentMods: Optional[List[str]]
+  predictedMods: Optional[List[str]]
   currentAccuracy: float
   predictedAccuracy: float
   accuracyGained: float

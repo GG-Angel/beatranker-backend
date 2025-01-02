@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from app.fetcher import fetch_scores
 from app.models import predict_scores, train_model
-from app.utils import df_to_json
+from app.utils import df_to_json, is_valid_id
 
 app = FastAPI()
 
@@ -50,17 +50,16 @@ class Recommendation(BaseModel):
 
 @app.get("/recommendations/{player_id}", response_model=List[Recommendation])
 async def get_recommendations(player_id: str):
+  if not is_valid_id(player_id):
+    raise HTTPException(status_code=404, detail="Player does not exist.")
+
   try:
-    print("Fetching maps...")
     maps_df = pd.read_csv("./app/ranked_maps.csv")
-    print("Fetching scores...")
     scores_df = fetch_scores(player_id)
   except:
-    raise HTTPException(status_code=500, detail="Failed to fetch.")
+    raise HTTPException(status_code=500, detail="Failed to fetch scores.")
 
-  print("Training model...")
   model = train_model(scores_df)
-  print("Predicting scores...")
   pred_df = predict_scores(model, scores_df, maps_df)
 
   return df_to_json(pred_df)

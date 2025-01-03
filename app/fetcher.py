@@ -1,3 +1,4 @@
+import json
 import requests
 import pandas as pd
 from datetime import datetime
@@ -44,8 +45,7 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
     url = f"https://api.beatleader.xyz/player/{player_id}/scores?sortBy=pp&order=desc&page={page}&count=10&type=ranked"
     resp = requests.get(url)
     if (resp.status_code != 200): 
-      break
-      # raise APIError(f"Failed to fetch scores for {player_id}. Response: {resp.text}")
+      raise APIError(f"Failed to fetch scores for {player_id}. Response: {resp.text}")
 
     scores = resp.json()["data"]
     if not scores: break
@@ -90,6 +90,30 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
 
   return scores_df
 
+def fetch_profile(player_id: str) -> dict:
+  """ Gets general information about a player on BeatLeader. 
+  
+  Params:
+    player_id (str): The player's BeatLeader id
+
+  Returns:
+    player_data (dict): Contains id, names, avatar, country, pp, and rank
+
+  Raises:
+    APIError: If a call to the BeatLeader API fails or returns a non-200 status code
+  """
+  
+  info_keys = ["id", "name", "alias", "avatar", "country", "pp", "rank", "countryRank"]
+  
+  url = f"https://api.beatleader.xyz/player/{player_id}"
+  resp = requests.get(url)
+  if resp.status_code != 200:
+    raise APIError(f"Failed to fetch profile. Response: {resp.text}")
+  
+  data = resp.json()
+
+  return { key: data[key] for key in info_keys }
+
 def fetch_maps() -> pd.DataFrame:
   """ Gets every ranked map that exists on BeatLeader. 
   
@@ -112,8 +136,7 @@ def fetch_maps() -> pd.DataFrame:
     url = f"https://api.beatleader.xyz/maps?page={page}&count=10&type=ranked"
     resp = requests.get(url)
     if (resp.status_code != 200): 
-      break
-      # raise APIError(f"Failed to fetch ranked maps. Response: {resp.text}") 
+      raise APIError(f"Failed to fetch ranked maps. Response: {resp.text}") 
 
     maps = resp.json()["data"]
     if not maps: break

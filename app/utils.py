@@ -8,6 +8,11 @@ def is_valid_id(player_id: str) -> bool:
   resp = requests.get(url)
   return resp.status_code == 200
 
+def clean_song_id(song_id: str) -> str:
+  if 'x' in song_id:
+    return song_id[:song_id.index('x')]
+  return song_id
+
 def filter_unplayed(scores_df: pd.DataFrame, maps_df: pd.DataFrame) -> pd.DataFrame: 
   bool_unplayed = ~maps_df["leaderboardId"].isin(scores_df["leaderboardId"])
   return maps_df[bool_unplayed].copy()

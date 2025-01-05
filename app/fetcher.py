@@ -1,9 +1,10 @@
 import json
+import time
 import requests
 import pandas as pd
 from datetime import datetime
 from app.pp import calc_modified_rating, calc_pp_from_accuracy
-from app.utils import time_ago
+from app.utils import clean_song_id, time_ago
 
 # map type conversions
 MAP_TYPES = { 
@@ -59,7 +60,7 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
       # prepare row data
       metadata = {
         "leaderboardId": leaderboard["id"],
-        "songId":        song["id"],
+        "songId":        clean_song_id(song["id"]),
         "cover":         song["coverImage"],
         "fullCover":     song["fullCoverImage"]
       }
@@ -84,6 +85,7 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
       score_rows.append({**metadata, **song_data, **diff_data, **score_data})
 
     page += 1
+    time.sleep(0.2)
 
   # create full dataframe
   scores_df = pd.DataFrame(score_rows)
@@ -144,7 +146,7 @@ def fetch_maps() -> pd.DataFrame:
     for ranked_map in maps:
       metadata = {
         "leaderboardId": "",
-        "songId":    ranked_map["id"],
+        "songId":    clean_song_id(ranked_map["id"]),
         "cover":     ranked_map["coverImage"],
         "fullCover": ranked_map["fullCoverImage"]
       }
@@ -165,6 +167,7 @@ def fetch_maps() -> pd.DataFrame:
         map_rows.append({**metadata, **song_data, **diff_data})
 
     page += 1
+    time.sleep(0.2)
 
   # create full dataframe (drop non-ranked maps)
   maps_df = pd.DataFrame(map_rows).dropna(subset=["stars"])

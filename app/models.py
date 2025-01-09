@@ -6,13 +6,12 @@ from app.utils import filter_unplayed
 
 # data given by predictions
 PRED_FEATURES = ['leaderboardId', 'songId', 'cover', 'fullCover', 'name', 'subName',
-                 'author', 'mapper', 'bpm', 'duration', 'difficultyName', 'type',
+                 'author', 'mapper', 'bpm', 'duration', 'durationMod', 'difficultyName', 'type',
                  'stars', 'passRating', 'accRating', 'techRating', 
                  'starsMod', 'passRatingMod', 'accRatingMod', 'techRatingMod', 
-                 "status", "rank", "timeAgo", "currentMods", "predictedMods",
+                 "status", "rank", "timeAgo", "timePost", "currentMods", "predictedMods",
                  "currentAccuracy", "predictedAccuracy", "accuracyGained",
-                 "currentPP", "predictedPP", "maxPP",
-                 "unweightedPPGain", "weightedPPGain", "weight"]
+                 "currentPP", "predictedPP", "maxPP", "unweightedPPGain", "weightedPPGain", "weight"]
 
 def train_model(scores_df: pd.DataFrame) -> np.array:
   """ Trains an exponential regression model on the player's existing scores, which predicts accuracy using a map's difficulty ratings. 
@@ -25,8 +24,8 @@ def train_model(scores_df: pd.DataFrame) -> np.array:
   """
 
   # calculate days since scores were set
-  max_date = scores_df["dateset"].max()
-  days_since = (max_date - scores_df["dateset"]).dt.days
+  max_date = scores_df["dateSet"].max()
+  days_since = (max_date - scores_df["dateSet"]).dt.days
 
   # apply weighted decay function so newer scores have more influence
   lambda_value = 0.1
@@ -79,7 +78,7 @@ def apply_weight_curve(pred_df: pd.DataFrame) -> pd.DataFrame:
     weights[weight_idx] = WEIGHT_CURVE[curve_idx]
     weight_idx += 1
 
-  # add weighted data  
+  # add weighted data
   weighted_df["weightedPPGain"] = weighted_df["unweightedPPGain"] * weights
   weighted_df["weight"] = weights
 
@@ -126,4 +125,4 @@ def predict_scores(model: np.array, scores_df: pd.DataFrame, maps_df: pd.DataFra
   for col in ["currentMods", "predictedMods"]:
     pred_df[col] = pred_df[col].apply(lambda x: np.nan if not x else x)
 
-  return pred_df[PRED_FEATURES]
+  return pred_df[PRED_FEATURES].sort_values(by="weightedPPGain", ascending=False)

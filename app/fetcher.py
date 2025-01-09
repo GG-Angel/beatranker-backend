@@ -78,7 +78,8 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
 
       # convert map type and time set
       diff_data["type"] = MAP_TYPES.get(diff_data["type"], "Unknown")
-      date_set = score_data["dateset"] = datetime.fromtimestamp(score["timepost"])
+      score_data["timePost"] = score["timepost"]
+      date_set = score_data["dateSet"] = datetime.fromtimestamp(score["timepost"])
       score_data["timeAgo"] = time_ago(date_set)
 
       # append score row

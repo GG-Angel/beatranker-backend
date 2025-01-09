@@ -1,5 +1,6 @@
 import pandas as pd
 
+from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
@@ -22,6 +23,7 @@ class Recommendation(BaseModel):
   mapper: str
   bpm: float
   duration: int
+  durationMod: int
   difficultyName: str
   type: str
   stars: float
@@ -35,6 +37,7 @@ class Recommendation(BaseModel):
   status: str
   rank: Optional[int]
   timeAgo: Optional[str]
+  timePost: Optional[int]
   currentMods: Optional[List[str]]
   predictedMods: Optional[List[str]]
   currentAccuracy: float

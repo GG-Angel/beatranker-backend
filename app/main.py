@@ -1,7 +1,9 @@
 import pandas as pd
 
-from datetime import datetime
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+
+from datetime import datetime
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -10,6 +12,14 @@ from app.models import predict_scores, train_model
 from app.utils import df_to_json, dict_to_json, is_valid_id
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 # schemas
 class Recommendation(BaseModel):
@@ -23,7 +33,6 @@ class Recommendation(BaseModel):
   mapper: str
   bpm: float
   duration: int
-  durationMod: int
   difficultyName: str
   type: str
   stars: float

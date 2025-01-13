@@ -6,7 +6,7 @@ from app.utils import filter_unplayed
 
 # data given by predictions
 PRED_FEATURES = ['leaderboardId', 'songId', 'cover', 'fullCover', 'name', 'subName',
-                 'author', 'mapper', 'bpm', 'duration', 'durationMod', 'difficultyName', 'type',
+                 'author', 'mapper', 'bpm', 'duration', 'difficultyName', 'type',
                  'stars', 'passRating', 'accRating', 'techRating', 
                  'starsMod', 'passRatingMod', 'accRatingMod', 'techRatingMod', 
                  "status", "rank", "timeAgo", "timePost", "currentMods", "predictedMods",

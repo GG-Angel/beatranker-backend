@@ -117,8 +117,7 @@ class RecommendationsMod(BaseModel):
 
 @app.put("/modifiers", response_model=List[Recommendation])
 async def update_modifiers(data: RecommendationsMod):
-  recs_df = pd.DataFrame(data.recs)
-  recs_df = pd.DataFrame([dict(col) for col in recs_df.values])
+  recs_df = pd.DataFrame([dict(col) for col in data.recs])  
   model = np.array(data.model)
   new_mods = data.mods
 

@@ -44,11 +44,10 @@ MOD_MULTIPLIERS = {
 modifier_list = ["SF", "FS", "GN", "NB", "NO", "SS", "NA"]
 
 def curve(acc, points):
-    """
-    Calculates the performance points based on a given accuracy by interpolating
+    """ Calculates the performance points based on a given accuracy by interpolating
     values from the points list.
 
-    Parameters:
+    Params:
         acc (float): The accuracy point to calculate the PP for as a decimal from 0-1.
         points (list of lists): List of accuracy and point pairs for interpolation.
 
@@ -68,11 +67,10 @@ def curve(acc, points):
     return points[i - 1][1] + middle_dis * (points[i][1] - points[i - 1][1])
 
 def inflate(pp):
-    """
-    Applies a scaling factor to increase the performance points (PP) to account for 
+    """ Applies a scaling factor to increase the performance points (PP) to account for 
     a more competitive score based on a predefined base value.
 
-    Parameters:
+    Params:
         pp (float): The initial performance points to be inflated.
 
     Returns:
@@ -81,7 +79,7 @@ def inflate(pp):
 
     return (650 * (pp ** 1.3)) / (650 ** 1.3)
 
-def calc_modified_rating(rating, ratingName, modifier_ratings, mods):
+def calc_modified_rating(rating, rating_name, modifier_ratings, mods):
     """ Computes the modified rating for pass, tech, or acc for any mods present.
 
     Params:
@@ -105,7 +103,7 @@ def calc_modified_rating(rating, ratingName, modifier_ratings, mods):
     # since these modifiers change each rating independently
     for mod in ["SF", "FS"]:
         if mod in mods:
-            rating = modifier_ratings[f"{mod.lower()}{ratingName[0].upper() + ratingName[1:]}"]
+            rating = modifier_ratings[f"{mod.lower()}{rating_name[0].upper() + rating_name[1:]}"]
             break
 
     remaining_mods = list(filter(lambda m: m not in ["SF", "FS"], mods))
@@ -119,11 +117,10 @@ def calc_modified_rating(rating, ratingName, modifier_ratings, mods):
     return rating + modifiers_sum
 
 def get_pp_from_acc(accuracy, pass_rating, acc_rating, tech_rating):
-    """
-    Calculates performance points earned for a specific accuracy point 
+    """ Calculates performance points earned for a specific accuracy point 
     on a BeatLeader ranked map.
 
-    Parameters:
+    Params:
         accuracy (float): The player's accuracy % on the map as a decimal from 0-1.
         pass_rating (float): The pass rating of the level.
         acc_rating (float): The accuracy rating of the level.
@@ -134,15 +131,20 @@ def get_pp_from_acc(accuracy, pass_rating, acc_rating, tech_rating):
               from pass, accuracy, and technical ratings after inflation.
     """
 
+    # clamp to prevent complex nums
+    pass_rating = max(0, pass_rating)
+    acc_rating = max(0, acc_rating)
+    tech_rating = max(0, tech_rating)
+
     pass_pp = 15.2 * math.exp(pass_rating ** (1 / 2.62)) - 30
     if not math.isfinite(pass_pp) or pass_pp < 0:
         pass_pp = 0
 
     acc_pp = curve(accuracy, POINT_LIST) * acc_rating * 34
-    
     tech_pp = math.exp(1.9 * accuracy) * 1.08 * tech_rating
+
     total_pp = inflate(pass_pp + acc_pp + tech_pp)
-    inflation = total_pp / (pass_pp + acc_pp + tech_pp)
+    inflation = (total_pp / (pass_pp + acc_pp + tech_pp)) if (pass_pp + acc_pp + tech_pp) > 0 else 0
 
     return [total_pp, pass_pp * inflation, acc_pp * inflation, tech_pp * inflation]
 

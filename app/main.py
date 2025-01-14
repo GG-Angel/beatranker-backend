@@ -1,8 +1,10 @@
 import json
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 import numpy as np
 import pandas as pd
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from datetime import datetime
@@ -19,7 +21,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET"],
+    allow_methods=["GET", "PUT"],
     allow_headers=["*"],
 )
 
@@ -72,13 +74,13 @@ class Profile(BaseModel):
   rank: int
   countryRank: int
 
-class MLInformation(BaseModel):
+class MLData(BaseModel):
   model: List[float]
 
 class ProfileAndRecommendations(BaseModel):
   profile: Profile
   recs: List[Recommendation]
-  ml: MLInformation
+  ml: MLData
 
 @app.get("/recommendations/{player_id}", response_model=ProfileAndRecommendations)
 async def get_recommendations(player_id: str):
@@ -102,13 +104,26 @@ async def get_recommendations(player_id: str):
   player_json = dict_to_json(player_dict)
   pred_json = df_to_json(pred_df)
 
-  return { 
-    "profile": player_json, 
-    "recs": pred_json,
+  # return { 
+  #   "profile": player_json, 
+  #   "recs": pred_json,
+  #   "ml": {
+  #     "model": model
+  #   }
+  # }
+
+  pred_df = pred_df.replace({ np.nan: None })
+
+  resp_dict = { 
+    "profile": player_dict, 
+    "recs": pred_df.to_dict(orient="records"),
     "ml": {
-      "model": model
+      "model": model.tolist()
     }
   }
+  
+  resp_json = jsonable_encoder(resp_dict)
+  return JSONResponse(content=resp_json)
 
 class RecommendationsMod(BaseModel):
   recs: List[Recommendation]
@@ -117,12 +132,14 @@ class RecommendationsMod(BaseModel):
 
 @app.put("/modifiers", response_model=List[Recommendation])
 async def update_modifiers(data: RecommendationsMod):
-  recs_df = pd.DataFrame([dict(col) for col in data.recs])  
-  model = np.array(data.model)
+  print("[Modifier Change]: Parsing request...")
+  recs_df = pd.DataFrame([row.model_dump() for row in data.recs])  
+  model = np.array(data.model).reshape(-1, 1)
   new_mods = data.mods
 
   # update scores according to new modifiers
+  print("[Modifier Change]: Predicting scores with new modifiers", new_mods)
   mod_df = apply_new_modifiers(model, recs_df, new_mods)
   mod_json = mod_df.to_json(orient="records")
 
-  return json.loads(mod_json)
+  return Response(mod_json, media_type="application/json")

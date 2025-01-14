@@ -1,3 +1,5 @@
+import json
+import numpy as np
 import pandas as pd
 
 from fastapi import FastAPI, HTTPException
@@ -5,10 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from datetime import datetime
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Dict, Optional
 
 from app.fetcher import fetch_profile, fetch_scores
-from app.models import predict_scores, train_model
+from app.models import apply_new_modifiers, predict_scores, train_model
 from app.utils import df_to_json, dict_to_json, is_valid_id
 
 app = FastAPI()
@@ -43,6 +45,7 @@ class Recommendation(BaseModel):
   passRatingMod: float
   accRatingMod: float
   techRatingMod: float
+  modifiersRating: Dict[str, float]
   status: str
   rank: Optional[int]
   timeAgo: Optional[str]
@@ -69,9 +72,13 @@ class Profile(BaseModel):
   rank: int
   countryRank: int
 
+class MLInformation(BaseModel):
+  model: List[float]
+
 class ProfileAndRecommendations(BaseModel):
   profile: Profile
   recs: List[Recommendation]
+  ml: MLInformation
 
 @app.get("/recommendations/{player_id}", response_model=ProfileAndRecommendations)
 async def get_recommendations(player_id: str):
@@ -97,5 +104,25 @@ async def get_recommendations(player_id: str):
 
   return { 
     "profile": player_json, 
-    "recs": pred_json 
+    "recs": pred_json,
+    "ml": {
+      "model": model
+    }
   }
+
+class RecommendationsMod(BaseModel):
+  recs: List[Recommendation]
+  model: List[float]
+  mods: List[str]
+
+@app.put("/modifiers", response_model=List[Recommendation])
+async def update_modifiers(data: RecommendationsMod):
+  recs_df = pd.DataFrame([dict(col) for col in data.recs])  
+  model = np.array(data.model)
+  new_mods = data.mods
+
+  # update scores according to new modifiers
+  mod_df = apply_new_modifiers(model, recs_df, new_mods)
+  mod_json = mod_df.to_json(orient="records")
+
+  return json.loads(mod_json)

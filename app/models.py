@@ -1,14 +1,15 @@
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import PolynomialFeatures
-from app.pp import WEIGHT_CURVE, calc_pp_from_accuracy
+from app.fetcher import RATINGS
+from app.pp import WEIGHT_CURVE, calc_modified_rating, calc_pp_from_accuracy
 from app.utils import filter_unplayed
 
 # data given by predictions
 PRED_FEATURES = ['leaderboardId', 'songId', 'cover', 'fullCover', 'name', 'subName',
                  'author', 'mapper', 'bpm', 'duration', 'difficultyName', 'type',
                  'stars', 'passRating', 'accRating', 'techRating', 
-                 'starsMod', 'passRatingMod', 'accRatingMod', 'techRatingMod', 
+                 'starsMod', 'passRatingMod', 'accRatingMod', 'techRatingMod', "modifiersRating",
                  "status", "rank", "timeAgo", "timePost", "currentMods", "predictedMods",
                  "currentAccuracy", "predictedAccuracy", "accuracyGained",
                  "currentPP", "predictedPP", "maxPP", "unweightedPPGain", "weightedPPGain", "weight"]
@@ -84,6 +85,8 @@ def apply_weight_curve(pred_df: pd.DataFrame) -> pd.DataFrame:
 
   return weighted_df
 
+
+
 def predict_scores(model: np.array, scores_df: pd.DataFrame, maps_df: pd.DataFrame) -> pd.DataFrame:
   """ Generates the player's potential accuracy and pp on every ranked map using the ML model. 
   
@@ -126,3 +129,47 @@ def predict_scores(model: np.array, scores_df: pd.DataFrame, maps_df: pd.DataFra
     pred_df[col] = pred_df[col].apply(lambda x: np.nan if not x else x)
 
   return pred_df[PRED_FEATURES].sort_values(by="weightedPPGain", ascending=False)
+
+def apply_new_modifiers(model: np.array, recs_df: pd.DataFrame, new_mods: list[str]) -> pd.DataFrame:
+    """Applies new modifiers to each map and updates their star ratings and predictions.
+    
+    Params:
+      model (arr): 1d array where the coef. correspond to the polynomial X-features; includes a bias coef. at index 0 for the y-intercept
+      recs_df (df): Table of recommendations already given by the API
+      new_mods (arr): Array of mods to apply to every map
+
+    Returns:
+      mod_df (df): The same table but with updated mod ratings and predictions
+    """
+    
+    recs_df["predictedMods"] = [new_mods] * len(recs_df)
+    
+    for index, level in recs_df.iterrows():
+        map_mod_ratings = level["modifiersRating"]
+        modified_ratings = []
+        for rating in RATINGS:
+            base_rating = level[rating]
+            modified_rating = calc_modified_rating(base_rating, rating, map_mod_ratings, new_mods)            
+            recs_df.at[index, f"{rating}Mod"] = modified_rating
+            modified_ratings.append(modified_rating)      
+        recs_df.at[index, "starsMod"] = calc_pp_from_accuracy(0.96, *modified_ratings)["total_pp"] / 52
+
+    # set up model input features
+    X = recs_df[["passRatingMod", "accRatingMod", "techRatingMod"]].values.reshape(-1, 3)
+    X_poly = PolynomialFeatures(degree=2, include_bias=False).fit_transform(X)
+
+    # get accuracy prediction metrics
+    recs_df["predictedAccuracy"] = np.minimum(1, 1 - np.exp(np.dot(X_poly, model[1:]) + model[0]))
+    recs_df["accuracyGained"] = np.maximum(0, recs_df["predictedAccuracy"] - recs_df["currentAccuracy"])
+
+    # get pp prediction metrics
+    recs_df["predictedPP"] = recs_df.apply(lambda row: calc_pp_from_accuracy(
+      row["predictedAccuracy"], row["passRatingMod"], row["accRatingMod"], row["techRatingMod"])["total_pp"], 
+      axis=1)
+    recs_df["maxPP"] = np.maximum(recs_df["currentPP"], recs_df["predictedPP"])
+
+    # generate pp gain per map
+    recs_df["unweightedPPGain"] = np.maximum(0, recs_df["predictedPP"] - recs_df["currentPP"])
+    recs_df = apply_weight_curve(recs_df)
+    
+    return recs_df

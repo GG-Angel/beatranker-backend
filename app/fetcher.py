@@ -36,7 +36,7 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
 
   # datapoints of interest
   song_keys = ['name', 'subName', 'author', 'mapper', 'bpm', 'duration']
-  difficulty_keys = ["stars", "passRating", "accRating", "techRating", "difficultyName", "type"]
+  difficulty_keys = ["stars", "passRating", "accRating", "techRating", "modifiersRating", "difficultyName", "type"]
   score_keys = ["accuracy", "pp", "rank", "modifiers", "fullCombo"]
 
   score_rows = []
@@ -70,11 +70,12 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
 
       # apply modifiers
       modifiers = score_data["currentMods"] = score_data["predictedMods"] = score["modifiers"].split(",") if score["modifiers"] != "" else []
+      map_mod_ratings = diff_data["modifiersRating"]
       for rating in RATINGS:
         base_rating = diff_data[rating]
-        modified_rating = calc_modified_rating(base_rating, rating, difficulty["modifiersRating"], modifiers)
+        modified_rating = calc_modified_rating(base_rating, rating, map_mod_ratings, modifiers)
         diff_data[f"{rating}Mod"] = modified_rating
-      diff_data[f"starsMod"] = calc_pp_from_accuracy(0.96, *[diff_data[rating] for rating in RATINGS])["total_pp"] / 52
+      diff_data["starsMod"] = calc_pp_from_accuracy(0.96, *[diff_data[rating] for rating in RATINGS])["total_pp"] / 52
 
       # convert map type and time set
       diff_data["type"] = MAP_TYPES.get(diff_data["type"], "Unknown")
@@ -129,7 +130,7 @@ def fetch_maps() -> pd.DataFrame:
 
   # datapoints of interest
   song_keys = ['name', 'subName', 'author', 'mapper', 'bpm', 'duration']
-  difficulty_keys = ["stars", "passRating", "accRating", "techRating", "difficultyName", "type"]
+  difficulty_keys = ["stars", "passRating", "accRating", "techRating", "modifiersRating", "difficultyName", "type"]
   
   map_rows = []
 

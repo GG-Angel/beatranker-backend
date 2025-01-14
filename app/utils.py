@@ -18,7 +18,15 @@ def filter_unplayed(scores_df: pd.DataFrame, maps_df: pd.DataFrame) -> pd.DataFr
   return maps_df[bool_unplayed].copy()
 
 def df_to_json(df: pd.DataFrame) -> list[dict]:
-  return json.loads(df.to_json(orient="records"))
+    # ensure modifier ratings are json rather than strings
+    def parse_modifiers(value):
+        if isinstance(value, str):
+            return json.loads(value.replace("'", '"'))
+        return value
+
+    df["modifiersRating"] = df["modifiersRating"].apply(parse_modifiers)
+
+    return json.loads(df.to_json(orient="records"))
 
 def dict_to_json(dict: dict) -> str:
   return json.loads(json.dumps(dict))

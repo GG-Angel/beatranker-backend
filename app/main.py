@@ -1,3 +1,5 @@
+import json
+import numpy as np
 import pandas as pd
 
 from fastapi import FastAPI, HTTPException
@@ -8,7 +10,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Optional
 
 from app.fetcher import fetch_profile, fetch_scores
-from app.models import predict_scores, train_model
+from app.models import apply_new_modifiers, predict_scores, train_model
 from app.utils import df_to_json, dict_to_json, is_valid_id
 
 app = FastAPI()
@@ -108,11 +110,20 @@ async def get_recommendations(player_id: str):
     }
   }
 
-class UpdateRecommendations(BaseModel):
+class RecommendationsMod(BaseModel):
   recs: List[Recommendation]
   model: List[float]
   mods: List[str]
 
-# @app.put("/modifiers/{data}", response_model=UpdateRecommendations)
-# async def update_modifiers(data: dict):
-#   pass
+@app.put("/modifiers", response_model=List[Recommendation])
+async def update_modifiers(data: RecommendationsMod):
+  recs_df = pd.DataFrame(data.recs)
+  recs_df = pd.DataFrame([dict(col) for col in recs_df.values])
+  model = np.array(data.model)
+  new_mods = data.mods
+
+  # update scores according to new modifiers
+  mod_df = apply_new_modifiers(model, recs_df, new_mods)
+  mod_json = mod_df.to_json(orient="records")
+
+  return json.loads(mod_json)

@@ -75,7 +75,7 @@ def fetch_scores(player_id: str) -> pd.DataFrame:
         base_rating = diff_data[rating]
         modified_rating = calc_modified_rating(base_rating, rating, map_mod_ratings, modifiers)
         diff_data[f"{rating}Mod"] = modified_rating
-      diff_data[f"starsMod"] = calc_pp_from_accuracy(0.96, *[diff_data[rating] for rating in RATINGS])["total_pp"] / 52
+      diff_data["starsMod"] = calc_pp_from_accuracy(0.96, *[diff_data[rating] for rating in RATINGS])["total_pp"] / 52
 
       # convert map type and time set
       diff_data["type"] = MAP_TYPES.get(diff_data["type"], "Unknown")

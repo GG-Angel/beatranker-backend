@@ -1,14 +1,15 @@
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import PolynomialFeatures
-from app.pp import WEIGHT_CURVE, calc_pp_from_accuracy
+from app.fetcher import RATINGS
+from app.pp import WEIGHT_CURVE, calc_modified_rating, calc_pp_from_accuracy
 from app.utils import filter_unplayed
 
 # data given by predictions
 PRED_FEATURES = ['leaderboardId', 'songId', 'cover', 'fullCover', 'name', 'subName',
                  'author', 'mapper', 'bpm', 'duration', 'difficultyName', 'type',
                  'stars', 'passRating', 'accRating', 'techRating', 
-                 'starsMod', 'passRatingMod', 'accRatingMod', 'techRatingMod', 
+                 'starsMod', 'passRatingMod', 'accRatingMod', 'techRatingMod', "modifiersRating",
                  "status", "rank", "timeAgo", "timePost", "currentMods", "predictedMods",
                  "currentAccuracy", "predictedAccuracy", "accuracyGained",
                  "currentPP", "predictedPP", "maxPP", "unweightedPPGain", "weightedPPGain", "weight"]
@@ -126,3 +127,12 @@ def predict_scores(model: np.array, scores_df: pd.DataFrame, maps_df: pd.DataFra
     pred_df[col] = pred_df[col].apply(lambda x: np.nan if not x else x)
 
   return pred_df[PRED_FEATURES].sort_values(by="weightedPPGain", ascending=False)
+
+# def apply_new_modifiers(recs_df: pd.DataFrame, new_mods: list[str]) -> pd.DataFrame:
+#   recs_df["predictedMods"] = new_mods
+#   for row in recs_df.iterrows():
+#     for rating in RATINGS:
+#       base_rating = row[rating]
+#       modified_rating = calc_modified_rating(base_rating, rating, )
+
+#   pass

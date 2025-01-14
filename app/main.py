@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from datetime import datetime
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Dict, Optional
 
 from app.fetcher import fetch_profile, fetch_scores
 from app.models import predict_scores, train_model
@@ -43,6 +43,7 @@ class Recommendation(BaseModel):
   passRatingMod: float
   accRatingMod: float
   techRatingMod: float
+  modifiersRating: Dict[str, float]
   status: str
   rank: Optional[int]
   timeAgo: Optional[str]
@@ -69,9 +70,13 @@ class Profile(BaseModel):
   rank: int
   countryRank: int
 
+class MLInformation(BaseModel):
+  model: List[float]
+
 class ProfileAndRecommendations(BaseModel):
   profile: Profile
   recs: List[Recommendation]
+  ml: MLInformation
 
 @app.get("/recommendations/{player_id}", response_model=ProfileAndRecommendations)
 async def get_recommendations(player_id: str):
@@ -97,5 +102,17 @@ async def get_recommendations(player_id: str):
 
   return { 
     "profile": player_json, 
-    "recs": pred_json 
+    "recs": pred_json,
+    "ml": {
+      "model": model
+    }
   }
+
+class UpdateRecommendations(BaseModel):
+  recs: List[Recommendation]
+  model: List[float]
+  mods: List[str]
+
+# @app.put("/modifiers/{data}", response_model=UpdateRecommendations)
+# async def update_modifiers(data: dict):
+#   pass

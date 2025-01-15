@@ -140,7 +140,7 @@ def apply_new_modifiers(model: np.array, recs_df: pd.DataFrame, new_mods: list[s
       mod_df (df): The same table but with updated mod ratings and predictions
     """
     
-    recs_df["predictedMods"] = [new_mods] * len(recs_df)
+    recs_df["predictedMods"] = ([new_mods] * len(recs_df)) if len(new_mods) > 0 else ([None] * len(recs_df))
     
     for index, level in recs_df.iterrows():
         map_mod_ratings = level["modifiersRating"]

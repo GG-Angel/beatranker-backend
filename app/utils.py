@@ -1,4 +1,5 @@
 import json
+import numpy as np
 import requests
 import pandas as pd
 from datetime import datetime
@@ -17,7 +18,7 @@ def filter_unplayed(scores_df: pd.DataFrame, maps_df: pd.DataFrame) -> pd.DataFr
   bool_unplayed = ~maps_df["leaderboardId"].isin(scores_df["leaderboardId"])
   return maps_df[bool_unplayed].copy()
 
-def df_to_json(df: pd.DataFrame) -> list[dict]:
+def df_to_dict(df: pd.DataFrame) -> list[dict]:
     # ensure modifier ratings are json rather than strings
     def parse_modifiers(value):
         if isinstance(value, str):
@@ -25,8 +26,8 @@ def df_to_json(df: pd.DataFrame) -> list[dict]:
         return value
 
     df["modifiersRating"] = df["modifiersRating"].apply(parse_modifiers)
-
-    return json.loads(df.to_json(orient="records"))
+    df = df.replace({ np.nan: None })
+    return df.to_dict(orient="records")
 
 def dict_to_json(dict: dict) -> str:
   return json.loads(json.dumps(dict))

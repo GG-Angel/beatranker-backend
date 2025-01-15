@@ -85,8 +85,6 @@ def apply_weight_curve(pred_df: pd.DataFrame) -> pd.DataFrame:
 
   return weighted_df
 
-
-
 def predict_scores(model: np.array, scores_df: pd.DataFrame, maps_df: pd.DataFrame) -> pd.DataFrame:
   """ Generates the player's potential accuracy and pp on every ranked map using the ML model. 
   
@@ -142,7 +140,7 @@ def apply_new_modifiers(model: np.array, recs_df: pd.DataFrame, new_mods: list[s
       mod_df (df): The same table but with updated mod ratings and predictions
     """
     
-    recs_df["predictedMods"] = [new_mods] * len(recs_df)
+    recs_df["predictedMods"] = ([new_mods] * len(recs_df)) if len(new_mods) > 0 else ([None] * len(recs_df))
     
     for index, level in recs_df.iterrows():
         map_mod_ratings = level["modifiersRating"]
@@ -151,7 +149,7 @@ def apply_new_modifiers(model: np.array, recs_df: pd.DataFrame, new_mods: list[s
             base_rating = level[rating]
             modified_rating = calc_modified_rating(base_rating, rating, map_mod_ratings, new_mods)            
             recs_df.at[index, f"{rating}Mod"] = modified_rating
-            modified_ratings.append(modified_rating)      
+            modified_ratings.append(modified_rating) 
         recs_df.at[index, "starsMod"] = calc_pp_from_accuracy(0.96, *modified_ratings)["total_pp"] / 52
 
     # set up model input features

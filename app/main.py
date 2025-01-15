@@ -1,17 +1,17 @@
-import json
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 import numpy as np
 import pandas as pd
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from datetime import datetime
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 
 from app.fetcher import fetch_profile, fetch_scores
 from app.models import apply_new_modifiers, predict_scores, train_model
-from app.utils import df_to_json, dict_to_json, is_valid_id
+from app.utils import df_to_dict, is_valid_id
 
 app = FastAPI()
 
@@ -19,7 +19,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET"],
+    allow_methods=["GET", "PUT"],
     allow_headers=["*"],
 )
 
@@ -72,13 +72,18 @@ class Profile(BaseModel):
   rank: int
   countryRank: int
 
-class MLInformation(BaseModel):
-  model: List[float]
+class MLData(BaseModel):
+  model: List[List[float]]
 
 class ProfileAndRecommendations(BaseModel):
   profile: Profile
   recs: List[Recommendation]
-  ml: MLInformation
+  ml: MLData
+
+class RecommendationsMod(BaseModel):
+  recs: List[Recommendation]
+  model: List[List[float]]
+  mods: List[str]
 
 @app.get("/recommendations/{player_id}", response_model=ProfileAndRecommendations)
 async def get_recommendations(player_id: str):
@@ -98,31 +103,27 @@ async def get_recommendations(player_id: str):
   print(f"[{player_id}] Predicting scores...")
   model = train_model(scores_df)
   pred_df = predict_scores(model, scores_df, maps_df)
-  
-  player_json = dict_to_json(player_dict)
-  pred_json = df_to_json(pred_df)
 
-  return { 
-    "profile": player_json, 
-    "recs": pred_json,
+  resp_dict = { 
+    "profile": player_dict, 
+    "recs": df_to_dict(pred_df),
     "ml": {
-      "model": model
+      "model": model.tolist()
     }
   }
-
-class RecommendationsMod(BaseModel):
-  recs: List[Recommendation]
-  model: List[float]
-  mods: List[str]
+  
+  return JSONResponse(resp_dict)
 
 @app.put("/modifiers", response_model=List[Recommendation])
 async def update_modifiers(data: RecommendationsMod):
-  recs_df = pd.DataFrame([dict(col) for col in data.recs])  
+  print("[Modifier Change]: Parsing request...")
+  recs_df = pd.DataFrame([row.model_dump() for row in data.recs])  
   model = np.array(data.model)
   new_mods = data.mods
 
   # update scores according to new modifiers
+  print("[Modifier Change]: Predicting scores with new modifiers", new_mods)
   mod_df = apply_new_modifiers(model, recs_df, new_mods)
-  mod_json = mod_df.to_json(orient="records")
+  mod_dict = df_to_dict(mod_df)
 
-  return json.loads(mod_json)
+  return JSONResponse(mod_dict)

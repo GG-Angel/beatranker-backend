@@ -71,6 +71,10 @@ class Profile(BaseModel):
   pp: float
   rank: int
   countryRank: int
+  bestPP: float
+  bestRank: int
+  medianPP: float
+  medianRank: int
 
 class MLData(BaseModel):
   model: List[List[float]]
@@ -103,9 +107,16 @@ async def get_recommendations(player_id: str):
   print(f"[{player_id}] Predicting scores...")
   model = train_model(scores_df)
   pred_df = predict_scores(model, scores_df, maps_df)
+  top_play = scores_df.loc[scores_df["pp"].idxmax()]
 
   resp_dict = { 
-    "profile": player_dict, 
+    "profile": {
+      **player_dict,
+      "bestPP": float(top_play["pp"]),
+      "bestRank": int(top_play["rank"]),
+      "medianPP": float(scores_df["pp"].median()),
+      "medianRank": int(scores_df["rank"].median())
+    }, 
     "recs": df_to_dict(pred_df),
     "ml": {
       "model": model.tolist()

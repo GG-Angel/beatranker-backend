@@ -1,16 +1,15 @@
-from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 import numpy as np
 import pandas as pd
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 
 from app.fetcher import fetch_profile, fetch_scores
-from app.models import apply_new_modifiers, predict_scores, train_model
+from app.models import apply_new_modifiers, generate_plot, predict_scores, train_model
 from app.utils import df_to_dict, is_valid_id
 
 app = FastAPI()
@@ -78,6 +77,7 @@ class Profile(BaseModel):
 
 class MLData(BaseModel):
   model: List[List[float]]
+  plot: str
 
 class ProfileAndRecommendations(BaseModel):
   profile: Profile
@@ -106,7 +106,7 @@ async def get_recommendations(player_id: str):
 
   print(f"[{player_id}] Predicting scores...")
   model = train_model(scores_df)
-  pred_df = predict_scores(model, scores_df, maps_df)
+  recs_df = predict_scores(model, scores_df, maps_df)
   top_play = scores_df.loc[scores_df["pp"].idxmax()]
 
   resp_dict = { 
@@ -117,9 +117,10 @@ async def get_recommendations(player_id: str):
       "medianPP": float(scores_df["pp"].median()),
       "medianRank": int(scores_df["rank"].median())
     }, 
-    "recs": df_to_dict(pred_df),
+    "recs": df_to_dict(recs_df),
     "ml": {
-      "model": model.tolist()
+      "model": model.tolist(),
+      "plot": generate_plot(recs_df)
     }
   }
   

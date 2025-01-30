@@ -1,14 +1,13 @@
+import asyncio
+from datetime import datetime, timezone
 from fastapi.responses import JSONResponse
 import numpy as np
 import pandas as pd
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-
 from pydantic import BaseModel
 from typing import List, Dict, Optional
-
-from app.fetcher import fetch_profile, fetch_scores
+from app.fetcher import fetch_maps, fetch_profile, fetch_scores
 from app.models import apply_new_modifiers, generate_plot, predict_scores, train_model
 from app.utils import df_to_dict, is_valid_id
 
@@ -21,6 +20,29 @@ app.add_middleware(
     allow_methods=["GET", "PUT"],
     allow_headers=["*"],
 )
+
+maps_df = pd.DataFrame()
+maps_time = datetime.now(timezone.utc)
+
+def get_ranked_maps():
+  global maps_df, maps_time
+  try:
+    print("[Maps] Fetching ranked maps...")
+    maps_df = fetch_maps()
+    maps_time = datetime.now(timezone.utc)
+    print("[Maps] Refresh complete!")
+  except:
+    print("[Maps] Failed to refresh ranked maps.")
+
+@app.on_event("startup")
+def startup_event():
+  get_ranked_maps()
+  asyncio.create_task(refresh_maps())
+
+async def refresh_maps():
+  while True:
+    await asyncio.sleep(60 * 60) # 1 hour
+    get_ranked_maps()
 
 # schemas
 class Recommendation(BaseModel):
@@ -93,13 +115,12 @@ class RecommendationsMod(BaseModel):
 async def get_recommendations(player_id: str):
   if not is_valid_id(player_id):
     raise HTTPException(status_code=404, detail="Player does not exist.")
-  
+
   try:
     print(f"[{player_id}] Fetching profile...")
     player_dict = fetch_profile(player_id)
 
     print(f"[{player_id}] Fetching scores...")
-    maps_df = pd.read_csv("./app/ranked_maps.csv")
     scores_df = fetch_scores(player_id)
   except:
     raise HTTPException(status_code=500, detail="Failed to fetch player data.")
@@ -109,6 +130,7 @@ async def get_recommendations(player_id: str):
   recs_df = predict_scores(model, scores_df, maps_df)
   top_play = scores_df.loc[scores_df["pp"].idxmax()]
 
+  print(f"[{player_id}] Predictions complete!")
   resp_dict = { 
     "profile": {
       **player_dict,
@@ -127,7 +149,7 @@ async def get_recommendations(player_id: str):
   return JSONResponse(resp_dict)
 
 @app.put("/modifiers", response_model=List[Recommendation])
-async def update_modifiers(data: RecommendationsMod):
+async def modify_recommendations(data: RecommendationsMod):
   print("[Modifier Change]: Parsing request...")
   recs_df = pd.DataFrame([row.model_dump() for row in data.recs])  
   model = np.array(data.model)

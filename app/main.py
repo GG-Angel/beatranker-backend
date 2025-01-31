@@ -111,6 +111,7 @@ class Profile(BaseModel):
 class MLData(BaseModel):
   model: List[List[float]]
   plot: str
+  lastMapRefresh: str
 
 class ProfileAndRecommendations(BaseModel):
   profile: Profile
@@ -140,8 +141,8 @@ async def get_recommendations(player_id: str):
   model = train_model(scores_df)
   recs_df = predict_scores(model, scores_df, maps_df)
   top_play = scores_df.loc[scores_df["pp"].idxmax()]
-
   print(f"[{player_id}] Predictions complete!")
+
   resp_dict = { 
     "profile": {
       **player_dict,
@@ -153,7 +154,8 @@ async def get_recommendations(player_id: str):
     "recs": df_to_dict(recs_df),
     "ml": {
       "model": model.tolist(),
-      "plot": generate_plot(recs_df)
+      "plot": generate_plot(recs_df),
+      "lastMapRefresh": maps_time.isoformat()
     }
   }
   
@@ -161,13 +163,13 @@ async def get_recommendations(player_id: str):
 
 @app.put("/modifiers", response_model=List[Recommendation])
 async def modify_recommendations(data: RecommendationsMod):
-  print("[Modifier Change]: Parsing request...")
+  print("[Modify]: Parsing request...")
   recs_df = pd.DataFrame([row.model_dump() for row in data.recs])  
   model = np.array(data.model)
   new_mods = data.mods
 
   # update scores according to new modifiers
-  print("[Modifier Change]: Predicting scores with new modifiers", new_mods)
+  print("[Modify]: Predicting scores with new modifiers", new_mods)
   mod_df = apply_new_modifiers(model, recs_df, new_mods)
   mod_dict = df_to_dict(mod_df)
 

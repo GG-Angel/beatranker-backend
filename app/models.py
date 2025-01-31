@@ -12,7 +12,7 @@ PRED_FEATURES = ['leaderboardId', 'songId', 'cover', 'fullCover', 'name', 'subNa
                  'author', 'mapper', 'bpm', 'duration', 'difficultyName', 'type',
                  'stars', 'passRating', 'accRating', 'techRating', 
                  'starsMod', 'passRatingMod', 'accRatingMod', 'techRatingMod', "modifiersRating",
-                 "status", "rank", "timeAgo", "timePost", "currentMods", "predictedMods",
+                 "status", "rank", "timeAgo", "timePost", "currentMods", "predictedMods", "isFiltered",
                  "currentAccuracy", "predictedAccuracy", "accuracyGained",
                  "currentPP", "predictedPP", "maxPP", "unweightedPPGain", "weightedPPGain", "weight"]
 
@@ -119,6 +119,7 @@ def predict_scores(model: np.array, scores_df: pd.DataFrame, maps_df: pd.DataFra
     row["predictedAccuracy"], row["passRatingMod"], row["accRatingMod"], row["techRatingMod"])["total_pp"], 
     axis=1)
   pred_df["maxPP"] = np.maximum(pred_df["currentPP"], pred_df["predictedPP"])
+  pred_df["isFiltered"] = False
 
   # generate pp gain per map
   pred_df["unweightedPPGain"] = np.maximum(0, pred_df["predictedPP"] - pred_df["currentPP"])

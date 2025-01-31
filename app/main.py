@@ -1,12 +1,13 @@
+import os
 import asyncio
-from datetime import datetime, timezone
-from fastapi.responses import JSONResponse
 import numpy as np
 import pandas as pd
+from datetime import datetime, timezone
+from typing import List, Dict, Optional
+from fastapi.responses import JSONResponse
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Dict, Optional
 from app.fetcher import fetch_maps, fetch_profile, fetch_scores
 from app.models import apply_new_modifiers, generate_plot, predict_scores, train_model
 from app.utils import df_to_dict, is_valid_id
@@ -24,25 +25,35 @@ app.add_middleware(
 maps_df = pd.DataFrame()
 maps_time = datetime.now(timezone.utc)
 
-def get_ranked_maps():
+# fetches ranked maps from beatleader api and loads them into memory
+async def get_ranked_maps():
   global maps_df, maps_time
   try:
     print("[Maps] Fetching ranked maps...")
-    maps_df = fetch_maps()
+    maps_df = await fetch_maps()
     maps_time = datetime.now(timezone.utc)
     print("[Maps] Refresh complete!")
   except:
     print("[Maps] Failed to refresh ranked maps.")
 
+# fetch ranked maps on startup and set task to refresh
 @app.on_event("startup")
-def startup_event():
-  get_ranked_maps()
+async def startup_event():
+  # await get_ranked_maps()
+
+  # REMOVE WHEN DONE
+  global maps_df
+  script_dir = os.path.dirname(os.path.abspath(__file__))
+  csv_path = os.path.join(script_dir, "ranked_maps.csv")
+  maps_df = pd.read_csv(csv_path)
+
   asyncio.create_task(refresh_maps())
 
+# refresh ranked maps every 2 hours
 async def refresh_maps():
   while True:
-    await asyncio.sleep(60 * 60) # 1 hour
-    get_ranked_maps()
+    await asyncio.sleep(2 * 60 * 60) # 2 hours
+    await get_ranked_maps()
 
 # schemas
 class Recommendation(BaseModel):
@@ -118,10 +129,10 @@ async def get_recommendations(player_id: str):
 
   try:
     print(f"[{player_id}] Fetching profile...")
-    player_dict = fetch_profile(player_id)
+    player_dict = await fetch_profile(player_id)
 
     print(f"[{player_id}] Fetching scores...")
-    scores_df = fetch_scores(player_id)
+    scores_df = await fetch_scores(player_id)
   except:
     raise HTTPException(status_code=500, detail="Failed to fetch player data.")
 

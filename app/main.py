@@ -79,6 +79,7 @@ class Recommendation(BaseModel):
   techRatingMod: float
   modifiersRating: Dict[str, float]
   status: str
+  isFiltered: bool
   rank: Optional[int]
   timeAgo: Optional[str]
   timePost: Optional[int]

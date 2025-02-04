@@ -124,6 +124,10 @@ class RecommendationsMod(BaseModel):
   model: List[List[float]]
   mods: List[str]
 
+class ModifiedRecommendations(BaseModel):
+  recs: List[Recommendation]
+  plot: Dict[str, Any]
+
 @app.get("/recommendations/{player_id}", response_model=ProfileAndRecommendations)
 async def get_recommendations(player_id: str):
   if not is_valid_id(player_id):
@@ -162,7 +166,7 @@ async def get_recommendations(player_id: str):
   
   return JSONResponse(resp_dict)
 
-@app.put("/modifiers", response_model=List[Recommendation])
+@app.put("/modifiers", response_model=ModifiedRecommendations)
 async def modify_recommendations(data: RecommendationsMod):
   print("[Modify]: Parsing request...")
   recs_df = pd.DataFrame([row.model_dump() for row in data.recs])  
@@ -172,6 +176,12 @@ async def modify_recommendations(data: RecommendationsMod):
   # update scores according to new modifiers
   print("[Modify]: Predicting scores with new modifiers", new_mods)
   mod_df = apply_new_modifiers(model, recs_df, new_mods)
-  mod_dict = df_to_dict(mod_df)
+  mod_plot = generate_plot(mod_df)
+  print("[Modify] Predictions complete!")
 
-  return JSONResponse(mod_dict)
+  resp_dict = {
+    "recs": df_to_dict(mod_df),
+    "plot": generate_plot(mod_df)
+  }
+
+  return JSONResponse(resp_dict)

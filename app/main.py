@@ -1,11 +1,12 @@
 import os
 import asyncio
+from cachetools import TTLCache
 import numpy as np
 import pandas as pd
 from datetime import datetime, timezone
 from typing import Any, List, Dict, Optional
 from fastapi.responses import JSONResponse
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from app.fetcher import fetch_maps, fetch_profile, fetch_scores
@@ -24,6 +25,7 @@ app.add_middleware(
 
 maps_df = pd.DataFrame()
 maps_time = datetime.now(timezone.utc)
+score_cache = TTLCache(maxsize=100, ttl=600)
 
 # fetches ranked maps from beatleader api and loads them into memory
 async def get_ranked_maps():
@@ -129,9 +131,15 @@ class ModifiedRecommendations(BaseModel):
   plot: Dict[str, Any]
 
 @app.get("/recommendations/{player_id}", response_model=ProfileAndRecommendations)
-async def get_recommendations(player_id: str):
+async def get_recommendations(
+  player_id: str,
+  force: bool = Query(False, description="Force a fresh fetch, bypassing the cache.")
+):
   if not is_valid_id(player_id):
     raise HTTPException(status_code=404, detail="Player does not exist.")
+  
+  if player_id in score_cache and not force:
+    return score_cache[player_id]
 
   try:
     print(f"[{player_id}] Fetching profile...")
@@ -163,6 +171,8 @@ async def get_recommendations(player_id: str):
     },
     "recs": df_to_dict(recs_df),
   }
+
+  score_cache[player_id] = resp_dict
   
   return JSONResponse(resp_dict)
 
@@ -176,7 +186,6 @@ async def modify_recommendations(data: RecommendationsMod):
   # update scores according to new modifiers
   print("[Modify]: Predicting scores with new modifiers", new_mods)
   mod_df = apply_new_modifiers(model, recs_df, new_mods)
-  mod_plot = generate_plot(mod_df)
   print("[Modify] Predictions complete!")
 
   resp_dict = {

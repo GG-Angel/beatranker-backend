@@ -179,7 +179,7 @@ def apply_new_modifiers(model: np.array, recs_df: pd.DataFrame, new_mods: list[s
 
 import numpy as np
 
-def generate_plot(recs_df: pd.DataFrame):    
+def generate_plot(recs_df: pd.DataFrame):
     plot = px.scatter(
       recs_df, x="starsMod", y="predictedAccuracy", color="type", 
       hover_data=[

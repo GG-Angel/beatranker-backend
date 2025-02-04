@@ -6,15 +6,21 @@ import pandas as pd
 from datetime import datetime, timezone
 from typing import Any, List, Dict, Optional
 from fastapi.responses import JSONResponse
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel
 from app.fetcher import fetch_maps, fetch_profile, fetch_scores
 from app.models import apply_new_modifiers, generate_plot, predict_scores, train_model
 from app.utils import df_to_dict, is_valid_id
 
 app = FastAPI()
+limiter = Limiter(key_func=get_remote_address)
+cache = TTLCache(maxsize=100, ttl=600)
 
+app.state.limiter = limiter
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,7 +31,6 @@ app.add_middleware(
 
 maps_df = pd.DataFrame()
 maps_time = datetime.now(timezone.utc)
-score_cache = TTLCache(maxsize=100, ttl=600)
 
 # fetches ranked maps from beatleader api and loads them into memory
 async def get_ranked_maps():
@@ -131,15 +136,17 @@ class ModifiedRecommendations(BaseModel):
   plot: Dict[str, Any]
 
 @app.get("/recommendations/{player_id}", response_model=ProfileAndRecommendations)
+@limiter.limit("5/minute")
 async def get_recommendations(
+  request: Request,
   player_id: str,
-  force: bool = Query(False, description="Force a fresh fetch, bypassing the cache.")
+  force: bool = Query(False, description="Force a fresh fetch, bypassing the cache."),
 ):
   if not is_valid_id(player_id):
     raise HTTPException(status_code=404, detail="Player does not exist.")
   
-  if player_id in score_cache and not force:
-    return score_cache[player_id]
+  if player_id in cache and not force:
+    return cache[player_id]
 
   try:
     print(f"[{player_id}] Fetching profile...")
@@ -172,12 +179,13 @@ async def get_recommendations(
     "recs": df_to_dict(recs_df),
   }
 
-  score_cache[player_id] = resp_dict
+  cache[player_id] = resp_dict
   
   return JSONResponse(resp_dict)
 
 @app.put("/modifiers", response_model=ModifiedRecommendations)
-async def modify_recommendations(data: RecommendationsMod):
+@limiter.limit("30/minute")
+async def modify_recommendations(request: Request, data: RecommendationsMod):
   print("[Modify]: Parsing request...")
   recs_df = pd.DataFrame([row.model_dump() for row in data.recs])  
   model = np.array(data.model)
@@ -194,3 +202,10 @@ async def modify_recommendations(data: RecommendationsMod):
   }
 
   return JSONResponse(resp_dict)
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_error(request: Request, exc: RateLimitExceeded):
+  return JSONResponse(
+    status_code=429,
+    content={"detail": "Rate limit exceeded! Please try again later."}
+  )

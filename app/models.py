@@ -1,7 +1,9 @@
+import json
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.io as pio
+from plotly.utils import PlotlyJSONEncoder
 from sklearn.preprocessing import PolynomialFeatures
 from app.fetcher import RATINGS
 from app.pp import WEIGHT_CURVE, calc_modified_rating, calc_pp_from_accuracy
@@ -175,13 +177,15 @@ def apply_new_modifiers(model: np.array, recs_df: pd.DataFrame, new_mods: list[s
   
   return recs_df
 
-def generate_plot(recs_df: pd.DataFrame) -> str:
-  plot = px.scatter(
-    recs_df, x="starsMod", y="predictedAccuracy", color="type", 
-    hover_data=[
-      "currentAccuracy", "predictedMods", "predictedPP", "weightedPPGain", "status", 
-      "name", "mapper", "type", "difficultyName", "passRatingMod", "accRatingMod", "techRatingMod"], 
-    title="X's Accuracy Potential according to Overall Star Rating"
-  )
-  html = pio.to_html(plot, full_html=False)
-  return html
+import numpy as np
+
+def generate_plot(recs_df: pd.DataFrame):    
+    plot = px.scatter(
+      recs_df, x="starsMod", y="predictedAccuracy", color="type", 
+      hover_data=[
+        "currentAccuracy", "predictedMods", "predictedPP", "weightedPPGain", "status", 
+        "name", "mapper", "type", "difficultyName", "passRatingMod", "accRatingMod", "techRatingMod"], 
+      title="Accuracy Potential against Overall Star Rating"
+    )
+    plot_json = json.loads(plot.to_json())    
+    return plot_json

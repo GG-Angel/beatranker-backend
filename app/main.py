@@ -3,7 +3,7 @@ import asyncio
 import numpy as np
 import pandas as pd
 from datetime import datetime, timezone
-from typing import List, Dict, Optional
+from typing import Any, List, Dict, Optional
 from fastapi.responses import JSONResponse
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -111,7 +111,7 @@ class Profile(BaseModel):
 
 class MLData(BaseModel):
   model: List[List[float]]
-  plot: str
+  plot: Dict[str, Any]
   lastMapRefresh: str
 
 class ProfileAndRecommendations(BaseModel):
@@ -152,12 +152,12 @@ async def get_recommendations(player_id: str):
       "medianPP": float(scores_df["pp"].median()),
       "medianRank": int(scores_df["rank"].median())
     }, 
-    "recs": df_to_dict(recs_df),
     "ml": {
       "model": model.tolist(),
       "plot": generate_plot(recs_df),
       "lastMapRefresh": maps_time.isoformat()
-    }
+    },
+    "recs": df_to_dict(recs_df),
   }
   
   return JSONResponse(resp_dict)

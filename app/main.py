@@ -1,6 +1,5 @@
 import os
 import asyncio
-from cachetools import TTLCache
 import numpy as np
 import pandas as pd
 from datetime import datetime, timezone
@@ -8,6 +7,7 @@ from typing import Any, List, Dict, Optional
 from fastapi.responses import JSONResponse
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from cachetools import TTLCache
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -46,14 +46,7 @@ async def get_ranked_maps():
 # fetch ranked maps on startup and set task to refresh
 @app.on_event("startup")
 async def startup_event():
-  # await get_ranked_maps()
-
-  # REMOVE WHEN DONE
-  global maps_df
-  script_dir = os.path.dirname(os.path.abspath(__file__))
-  csv_path = os.path.join(script_dir, "ranked_maps.csv")
-  maps_df = pd.read_csv(csv_path)
-
+  await get_ranked_maps()
   asyncio.create_task(refresh_maps())
 
 # refresh ranked maps every 2 hours
@@ -209,3 +202,7 @@ async def rate_limit_error(request: Request, exc: RateLimitExceeded):
     status_code=429,
     content={"detail": "Rate limit exceeded! Please try again later."}
   )
+
+if __name__ == "__main__":
+  import uvicorn
+  uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

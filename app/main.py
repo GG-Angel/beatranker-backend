@@ -12,9 +12,9 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel
-from app.fetcher import fetch_maps, fetch_profile, fetch_scores
-from app.models import apply_new_modifiers, generate_plot, predict_scores, train_model
-from app.utils import df_to_dict, is_valid_id
+from fetcher import fetch_maps, fetch_profile, fetch_scores
+from models import apply_new_modifiers, generate_plot, predict_scores, train_model
+from utils import df_to_dict, is_valid_id
 
 app = FastAPI()
 limiter = Limiter(key_func=get_remote_address)

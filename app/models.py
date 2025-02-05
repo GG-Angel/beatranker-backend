@@ -5,9 +5,9 @@ import plotly.express as px
 import plotly.io as pio
 from plotly.utils import PlotlyJSONEncoder
 from sklearn.preprocessing import PolynomialFeatures
-from app.fetcher import RATINGS
-from app.pp import WEIGHT_CURVE, calc_modified_rating, calc_pp_from_accuracy
-from app.utils import filter_unplayed
+from fetcher import RATINGS
+from pp import WEIGHT_CURVE, calc_modified_rating, calc_pp_from_accuracy
+from utils import filter_unplayed
 
 # data given by predictions
 PRED_FEATURES = ['leaderboardId', 'songId', 'cover', 'fullCover', 'name', 'subName',

@@ -3,8 +3,8 @@ import asyncio
 import httpx
 import pandas as pd
 from datetime import datetime
-from app.pp import calc_modified_rating, calc_pp_from_accuracy
-from app.utils import clean_song_id, time_ago
+from pp import calc_modified_rating, calc_pp_from_accuracy
+from utils import clean_song_id, time_ago
 
 # map type conversions
 MAP_TYPES = { 

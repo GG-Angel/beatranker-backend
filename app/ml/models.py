@@ -2,12 +2,11 @@ import json
 import numpy as np
 import pandas as pd
 import plotly.express as px
-import plotly.io as pio
-from plotly.utils import PlotlyJSONEncoder
 from sklearn.preprocessing import PolynomialFeatures
-from fetcher import RATINGS
-from pp import WEIGHT_CURVE, calc_modified_rating, calc_pp_from_accuracy
-from utils import filter_unplayed
+
+from app.ml.pp import WEIGHT_CURVE, calc_modified_rating, calc_pp_from_accuracy
+from app.services.fetcher import RATINGS
+from app.utils.utils import filter_unplayed
 
 # data given by predictions
 PRED_FEATURES = ['leaderboardId', 'songId', 'cover', 'fullCover', 'name', 'subName',

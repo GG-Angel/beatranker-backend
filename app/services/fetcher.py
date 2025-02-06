@@ -1,10 +1,9 @@
-import time
 import asyncio
 import httpx
 import pandas as pd
 from datetime import datetime
-from pp import calc_modified_rating, calc_pp_from_accuracy
-from utils import clean_song_id, time_ago
+from app.ml.pp import calc_modified_rating, calc_pp_from_accuracy
+from app.utils.utils import clean_song_id, time_ago
 
 # map type conversions
 MAP_TYPES = { 
@@ -137,7 +136,7 @@ async def fetch_maps() -> pd.DataFrame:
 
   async with httpx.AsyncClient() as client:
     page = 1
-    while True:
+    while True and page < 1:
       # fetch data from beatleader api
       url = f"https://api.beatleader.xyz/maps?page={page}&count=10&type=ranked"
       resp = await client.get(url)

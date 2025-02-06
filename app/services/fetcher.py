@@ -20,10 +20,38 @@ class APIError(Exception):
   """ Custom exception for API-related errors. """
   pass
 
+async def fetch_players(query: str = "", k: int = 5) -> list:
+  """ Searches for players on BeatLeader by username and id.
+
+  Params:
+    query (str): The search query
+    k (int): The number of players to return, must be <= 50
+
+  Returns:
+    players (list): Gives a list of the top k players sorted by rank, if they exist
+  """
+
+  if (k > 50):
+    raise APIError(f"Cannot search for more than 50 players (k = {k})")
+
+  async with httpx.AsyncClient() as client:
+      url = f"https://api.beatleader.xyz/players?page=1&count={k}&search={query}"
+      resp = await client.get(url)
+      
+      if resp.status_code != 200:
+          raise APIError(f"Failed to search players. Response: {resp.text}")
+
+      data = resp.json().get("data", [])
+  
+  keys = ["id", "name", "alias", "avatar", "rank", "pp"]
+  parsed = [{key: player.get(key) for key in keys} for player in data]
+  
+  return parsed
+
 async def fetch_scores(player_id: str) -> pd.DataFrame:
   """ Gets every ranked score set by a player on BeatLeader.
 
-  Args:
+  Params:
     playerId (str): The player's BeatLeader id
 
   Returns:

@@ -54,6 +54,14 @@ class Profile(BaseModel):
   medianPP: float
   medianRank: int
 
+class ProfileCompact(BaseModel):
+  id: str
+  name: str
+  alias: str
+  avatar: str
+  pp: float
+  rank: int
+
 class MLData(BaseModel):
   model: List[List[float]]
   plot: Dict[str, Any]

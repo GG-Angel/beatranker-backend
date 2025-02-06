@@ -36,8 +36,8 @@ async def get_recommendations(
 
     print(f"[{player_id}] Fetching scores...")
     scores_df = await fetch_scores(player_id)
-  except:
-    raise HTTPException(status_code=500, detail="Failed to fetch player data.")
+  except Exception as e:
+    raise HTTPException(status_code=500, detail=f"Failed to fetch player data. {str(e)}")
 
   print(f"[{player_id}] Predicting scores...")
   model = train_model(scores_df)

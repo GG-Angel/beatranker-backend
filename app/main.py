@@ -3,14 +3,12 @@ import asyncio
 from fastapi.responses import JSONResponse
 from fastapi import FastAPI, Request
 from slowapi.errors import RateLimitExceeded
+from app.limiter import limiter
 from app.routers import modifiers, recommendations
-from app.services.maps import get_ranked_maps, refresh_maps
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from app.services.maps import cache_maps, refresh_maps
 
 app = FastAPI()
-limiter = Limiter(key_func=get_remote_address)
 
 app.state.limiter = limiter
 app.add_middleware(
@@ -27,7 +25,7 @@ app.include_router(modifiers.router)
 # fetch ranked maps on startup and set task to refresh
 @app.on_event("startup")
 async def startup_event():
-  await get_ranked_maps()
+  await cache_maps()
   asyncio.create_task(refresh_maps())
 
 @app.exception_handler(RateLimitExceeded)

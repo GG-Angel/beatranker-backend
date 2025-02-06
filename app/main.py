@@ -14,10 +14,18 @@ app = FastAPI(
   version="1.0.0"
 )
 
+origins = [
+  "https://www.beatranker.xyz", 
+  "https://beatranker.xyz",
+  "http://localhost:3000",  # for development
+  "http://127.0.0.1:3000",  # for development
+  "http://localhost:5173"   # for development
+]
+
 app.state.limiter = limiter
 app.add_middleware(
   CORSMiddleware,
-  allow_origins=["https://www.beatranker.xyz", "https://beatranker.xyz"],
+  allow_origins=origins,
   allow_credentials=True,
   allow_methods=["GET", "PUT"],
   allow_headers=["*"],

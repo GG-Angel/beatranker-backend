@@ -9,7 +9,7 @@ from app.utils.utils import df_to_dict, is_valid_id
 from app.limiter import limiter
 from app.services.maps import get_cached_maps, get_last_map_refresh
 
-router = APIRouter()
+router = APIRouter(tags=["Recommendations"])
 
 cache = TTLCache(maxsize=100, ttl=600) # 10 minutes
 
@@ -20,6 +20,10 @@ async def get_recommendations(
   player_id: str,
   force: bool = Query(False, description="Force a fresh fetch, bypassing the cache."),
 ):
+  """
+  Get recommendations for a given player based on existing scores and performance metrics.
+  """
+
   if not is_valid_id(player_id):
     raise HTTPException(status_code=404, detail="Player does not exist.")
   

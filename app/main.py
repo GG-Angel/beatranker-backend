@@ -8,7 +8,11 @@ from app.routers import modifiers, recommendations
 from fastapi.middleware.cors import CORSMiddleware
 from app.services.maps import cache_maps, refresh_maps
 
-app = FastAPI()
+app = FastAPI(
+  title="BeatRanker API",
+  description="API for Improving Beat Saber Performance and Rank on BeatLeader through Map Recommendations",
+  version="1.0.0"
+)
 
 app.state.limiter = limiter
 app.add_middleware(

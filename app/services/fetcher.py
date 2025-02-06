@@ -136,7 +136,7 @@ async def fetch_maps() -> pd.DataFrame:
 
   async with httpx.AsyncClient() as client:
     page = 1
-    while True:
+    while True and page < 1:
       # fetch data from beatleader api
       url = f"https://api.beatleader.xyz/maps?page={page}&count=10&type=ranked"
       resp = await client.get(url)

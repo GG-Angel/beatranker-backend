@@ -8,11 +8,15 @@ from app.models.messages import ModRequest, ModResponse
 from app.limiter import limiter
 from app.utils.utils import df_to_dict
 
-router = APIRouter()
+router = APIRouter(tags=["Modifiers"])
 
 @router.put("/modifiers", response_model=ModResponse)
 @limiter.limit("30/minute")
 async def modify_recommendations(request: Request, data: ModRequest):
+  """
+  Apply a given set of modifiers to the recommendations and predict the new scores accordingly.
+  """
+
   print("[Modify]: Parsing request...")
   recs_df = pd.DataFrame([row.model_dump() for row in data.recs])  
   model = np.array(data.model)

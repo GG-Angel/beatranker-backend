@@ -3,10 +3,10 @@ import asyncio
 from fastapi.responses import JSONResponse
 from fastapi import FastAPI, Request
 from slowapi.errors import RateLimitExceeded
-from app.limiter import limiter
-from app.routers import modifiers, recommendations
+from limiter import limiter
+from routers import modifiers, recommendations
 from fastapi.middleware.cors import CORSMiddleware
-from app.services.maps import cache_maps, refresh_maps
+from services.maps import cache_maps, refresh_maps
 
 app = FastAPI(
   title="BeatRanker API",

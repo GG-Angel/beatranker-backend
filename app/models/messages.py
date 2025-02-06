@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 from pydantic import BaseModel
-from app.models.models import Profile, Recommendation, MLData
+from models.models import Profile, Recommendation, MLData
 
 class AllResponse(BaseModel):
   profile: Profile

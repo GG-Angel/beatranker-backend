@@ -3,10 +3,10 @@ import pandas as pd
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from app.ml.models import apply_new_modifiers, generate_plot
-from app.models.messages import ModRequest, ModResponse
-from app.limiter import limiter
-from app.utils.utils import df_to_dict
+from ml.models import apply_new_modifiers, generate_plot
+from models.messages import ModRequest, ModResponse
+from limiter import limiter
+from utils.utils import df_to_dict
 
 router = APIRouter(tags=["Modifiers"])
 

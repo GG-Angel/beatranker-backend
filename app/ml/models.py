@@ -4,9 +4,9 @@ import pandas as pd
 import plotly.express as px
 from sklearn.preprocessing import PolynomialFeatures
 
-from app.ml.pp import WEIGHT_CURVE, calc_modified_rating, calc_pp_from_accuracy
-from app.services.fetcher import RATINGS
-from app.utils.utils import filter_unplayed
+from ml.pp import WEIGHT_CURVE, calc_modified_rating, calc_pp_from_accuracy
+from services.fetcher import RATINGS
+from utils.utils import filter_unplayed
 
 # data given by predictions
 PRED_FEATURES = ['leaderboardId', 'songId', 'cover', 'fullCover', 'name', 'subName',

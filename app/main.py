@@ -1,200 +1,34 @@
 import os
 import asyncio
-import numpy as np
-import pandas as pd
-from datetime import datetime, timezone
-from typing import Any, List, Dict, Optional
 from fastapi.responses import JSONResponse
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, Request
+from slowapi.errors import RateLimitExceeded
+from app.routers import modifiers, recommendations
+from app.services.maps import get_ranked_maps, refresh_maps
 from fastapi.middleware.cors import CORSMiddleware
-from cachetools import TTLCache
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-from pydantic import BaseModel
-from fetcher import fetch_maps, fetch_profile, fetch_scores
-from models import apply_new_modifiers, generate_plot, predict_scores, train_model
-from utils import df_to_dict, is_valid_id
 
 app = FastAPI()
 limiter = Limiter(key_func=get_remote_address)
-cache = TTLCache(maxsize=100, ttl=600)
 
 app.state.limiter = limiter
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["GET", "PUT"],
-    allow_headers=["*"],
+  CORSMiddleware,
+  allow_origins=["https://www.beatranker.xyz", "https://beatranker.xyz"],
+  allow_credentials=True,
+  allow_methods=["GET", "PUT"],
+  allow_headers=["*"],
 )
 
-maps_df = pd.DataFrame()
-maps_time = datetime.now(timezone.utc)
-
-# fetches ranked maps from beatleader api and loads them into memory
-async def get_ranked_maps():
-  global maps_df, maps_time
-  try:
-    print("[Maps] Fetching ranked maps...")
-    maps_df = await fetch_maps()
-    maps_time = datetime.now(timezone.utc)
-    print("[Maps] Refresh complete!")
-  except:
-    print("[Maps] Failed to refresh ranked maps.")
+app.include_router(recommendations.router)
+app.include_router(modifiers.router)
 
 # fetch ranked maps on startup and set task to refresh
 @app.on_event("startup")
 async def startup_event():
   await get_ranked_maps()
   asyncio.create_task(refresh_maps())
-
-# refresh ranked maps every 2 hours
-async def refresh_maps():
-  while True:
-    await asyncio.sleep(2 * 60 * 60) # 2 hours
-    await get_ranked_maps()
-
-# schemas
-class Recommendation(BaseModel):
-  leaderboardId: str
-  songId: str
-  cover: str
-  fullCover: str
-  name: str
-  subName: Optional[str]
-  author: str
-  mapper: str
-  bpm: float
-  duration: int
-  difficultyName: str
-  type: str
-  stars: float
-  passRating: float
-  accRating: float
-  techRating: float
-  starsMod: float
-  passRatingMod: float
-  accRatingMod: float
-  techRatingMod: float
-  modifiersRating: Dict[str, float]
-  status: str
-  isFiltered: bool
-  rank: Optional[int]
-  timeAgo: Optional[str]
-  timePost: Optional[int]
-  currentMods: Optional[List[str]]
-  predictedMods: Optional[List[str]]
-  currentAccuracy: float
-  predictedAccuracy: float
-  accuracyGained: float
-  currentPP: float
-  predictedPP: float
-  maxPP: float
-  unweightedPPGain: float
-  weightedPPGain: float
-  weight: float
-
-class Profile(BaseModel):
-  id: str
-  name: str
-  alias: str
-  avatar: str
-  country: str
-  pp: float
-  rank: int
-  countryRank: int
-  bestPP: float
-  bestRank: int
-  medianPP: float
-  medianRank: int
-
-class MLData(BaseModel):
-  model: List[List[float]]
-  plot: Dict[str, Any]
-  lastMapRefresh: str
-
-class ProfileAndRecommendations(BaseModel):
-  profile: Profile
-  recs: List[Recommendation]
-  ml: MLData
-
-class RecommendationsMod(BaseModel):
-  recs: List[Recommendation]
-  model: List[List[float]]
-  mods: List[str]
-
-class ModifiedRecommendations(BaseModel):
-  recs: List[Recommendation]
-  plot: Dict[str, Any]
-
-@app.get("/recommendations/{player_id}", response_model=ProfileAndRecommendations)
-@limiter.limit("5/minute")
-async def get_recommendations(
-  request: Request,
-  player_id: str,
-  force: bool = Query(False, description="Force a fresh fetch, bypassing the cache."),
-):
-  if not is_valid_id(player_id):
-    raise HTTPException(status_code=404, detail="Player does not exist.")
-  
-  if player_id in cache and not force:
-    return cache[player_id]
-
-  try:
-    print(f"[{player_id}] Fetching profile...")
-    player_dict = await fetch_profile(player_id)
-
-    print(f"[{player_id}] Fetching scores...")
-    scores_df = await fetch_scores(player_id)
-  except:
-    raise HTTPException(status_code=500, detail="Failed to fetch player data.")
-
-  print(f"[{player_id}] Predicting scores...")
-  model = train_model(scores_df)
-  recs_df = predict_scores(model, scores_df, maps_df)
-  top_play = scores_df.loc[scores_df["pp"].idxmax()]
-  print(f"[{player_id}] Predictions complete!")
-
-  resp_dict = { 
-    "profile": {
-      **player_dict,
-      "bestPP": float(top_play["pp"]),
-      "bestRank": int(top_play["rank"]),
-      "medianPP": float(scores_df["pp"].median()),
-      "medianRank": int(scores_df["rank"].median())
-    }, 
-    "ml": {
-      "model": model.tolist(),
-      "plot": generate_plot(recs_df),
-      "lastMapRefresh": maps_time.isoformat()
-    },
-    "recs": df_to_dict(recs_df),
-  }
-
-  cache[player_id] = resp_dict
-  
-  return JSONResponse(resp_dict)
-
-@app.put("/modifiers", response_model=ModifiedRecommendations)
-@limiter.limit("30/minute")
-async def modify_recommendations(request: Request, data: RecommendationsMod):
-  print("[Modify]: Parsing request...")
-  recs_df = pd.DataFrame([row.model_dump() for row in data.recs])  
-  model = np.array(data.model)
-  new_mods = data.mods
-
-  # update scores according to new modifiers
-  print("[Modify]: Predicting scores with new modifiers", new_mods)
-  mod_df = apply_new_modifiers(model, recs_df, new_mods)
-  print("[Modify] Predictions complete!")
-
-  resp_dict = {
-    "recs": df_to_dict(mod_df),
-    "plot": generate_plot(mod_df)
-  }
-
-  return JSONResponse(resp_dict)
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_error(request: Request, exc: RateLimitExceeded):

@@ -43,7 +43,7 @@ class Recommendation(BaseModel):
 class Profile(BaseModel):
   id: str
   name: str
-  alias: str
+  alias: Optional[str]
   avatar: str
   country: str
   pp: float
@@ -57,7 +57,7 @@ class Profile(BaseModel):
 class ProfileCompact(BaseModel):
   id: str
   name: str
-  alias: str
+  alias: Optional[str]
   avatar: str
   pp: float
   rank: int

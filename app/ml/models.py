@@ -4,9 +4,9 @@ import pandas as pd
 import plotly.express as px
 from sklearn.preprocessing import PolynomialFeatures
 
-from ml.pp import WEIGHT_CURVE, calc_modified_rating, calc_pp_from_accuracy
-from services.fetcher import RATINGS
-from utils.utils import filter_unplayed
+from app.ml.pp import WEIGHT_CURVE, calc_modified_rating, calc_pp_from_accuracy
+from app.services.fetcher import RATINGS
+from app.utils.utils import filter_unplayed
 
 # data given by predictions
 PRED_FEATURES = ['leaderboardId', 'songId', 'cover', 'fullCover', 'name', 'subName',
@@ -40,7 +40,7 @@ def train_model(scores_df: pd.DataFrame) -> np.array:
   X_poly = PolynomialFeatures(degree=2, include_bias=False).fit_transform(X)
 
   # dependent variable; invert to mimic downward curve
-  y_inv = (1 - scores_df["accuracy"]).to_numpy().reshape(-1, 1)
+  y_inv = np.clip(1 - scores_df["accuracy"].to_numpy(), 1e-10, None).reshape(-1, 1)
   y_inv_log = np.log(y_inv)
 
   # set up lobf equation

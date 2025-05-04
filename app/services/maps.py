@@ -1,7 +1,7 @@
 import pandas as pd
 import asyncio
 from datetime import datetime, timezone
-from services.fetcher import fetch_maps
+from app.services.fetcher import fetch_maps
 
 maps_df = pd.DataFrame()
 maps_time = datetime.now(timezone.utc)

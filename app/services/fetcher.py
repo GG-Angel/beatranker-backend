@@ -2,8 +2,8 @@ import asyncio
 import httpx
 import pandas as pd
 from datetime import datetime
-from ml.pp import calc_modified_rating, calc_pp_from_accuracy
-from utils.utils import clean_song_id, time_ago
+from app.ml.pp import calc_modified_rating, calc_pp_from_accuracy
+from app.utils.utils import clean_song_id, time_ago
 
 # map type conversions
 MAP_TYPES = { 
@@ -71,7 +71,7 @@ async def fetch_scores(player_id: str) -> pd.DataFrame:
   async with httpx.AsyncClient() as client:
     page = 1
     while True:
-      url = f"https://api.beatleader.xyz/player/{player_id}/scores?sortBy=pp&order=desc&page={page}&count=10&type=ranked"
+      url = f"https://api.beatleader.xyz/player/{player_id}/scores?sortBy=pp&order=desc&page={page}&count=100&type=ranked"
       resp = await client.get(url)
       if (resp.status_code != 200): 
         raise APIError(f"Failed to fetch scores for {player_id}. Response: {resp.text}")
@@ -166,7 +166,7 @@ async def fetch_maps() -> pd.DataFrame:
     page = 1
     while True:
       # fetch data from beatleader api
-      url = f"https://api.beatleader.xyz/maps?page={page}&count=10&type=ranked"
+      url = f"https://api.beatleader.xyz/maps?page={page}&count=100&type=ranked"
       resp = await client.get(url)
       if (resp.status_code != 200): 
         raise APIError(f"Failed to fetch ranked maps. Response: {resp.text}") 

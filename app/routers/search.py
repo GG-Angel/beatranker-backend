@@ -1,9 +1,9 @@
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
-from models.models import ProfileCompact
-from services.fetcher import fetch_players
-from limiter import limiter
+from app.models.models import ProfileCompact
+from app.services.fetcher import fetch_players
+from app.services.limiter import limiter
 
 router = APIRouter(tags=["Search"])
 

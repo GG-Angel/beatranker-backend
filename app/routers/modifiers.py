@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.ml.models import apply_new_modifiers, generate_plot
 from app.models.messages import ModRequest, ModResponse
-from app.limiter import limiter
+from app.services.limiter import limiter
 from app.utils.utils import df_to_dict
 
 router = APIRouter(tags=["Modifiers"])

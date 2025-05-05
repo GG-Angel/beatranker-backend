@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
-from app.limiter import limiter
+from app.services.limiter import limiter
 from app.routers import modifiers, recommendations, search
 from app.services.maps import cache_maps, refresh_maps
 

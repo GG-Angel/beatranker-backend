@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from app.models.models import ProfileCompact
 from app.services.fetcher import fetch_players
-from app.limiter import limiter
+from app.services.limiter import limiter
 
 router = APIRouter(tags=["Search"])
 

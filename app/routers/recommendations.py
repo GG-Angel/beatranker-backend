@@ -6,7 +6,7 @@ from app.ml.models import generate_plot, predict_scores, train_model
 from app.models.messages import AllResponse
 from app.services.fetcher import fetch_profile, fetch_scores
 from app.utils.utils import df_to_dict, is_valid_id
-from app.limiter import limiter
+from app.services.limiter import limiter
 from app.services.maps import get_cached_maps, get_last_map_refresh
 
 router = APIRouter(tags=["Recommendations"])
